@@ -43,6 +43,10 @@ npm run build    # build de produção
 npm run test     # testes de componente (Vitest + RTL)
 ```
 
+## Ferramentas de IA fora do versionamento
+
+Pastas de tooling de IA (skills/plugins/caches do Claude Code) **não sobem para o repo**. Já ignoradas no `.gitignore`: `.claude/` e `.impeccable/`. Ao adicionar outra ferramenta que crie pasta local no projeto, ignorá-la também.
+
 ## Lovable = só protótipo visual (regra permanente)
 
 Telas geradas no Lovable são **referência visual estática**, nunca backend. Ao prompar no Lovable, sempre exigir "sem backend, sem Supabase, dados mockados em array local". Antes de portar qualquer componente Lovable para o repo, rodar `grep -r "supabase"` no export e remover todo resquício antes de ligar na API DRF.
