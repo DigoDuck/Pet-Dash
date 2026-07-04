@@ -38,6 +38,9 @@ pnpm-debug.log*
 .claude/
 .impeccable/
 
+# ==== Material de estudo pessoal (não versionar) ====
+estudos/
+
 # ==== Editores / SO ====
 .vscode/
 .idea/
