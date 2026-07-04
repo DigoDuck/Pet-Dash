@@ -2,25 +2,40 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> Fonte de verdade da modelagem: `PetDash - Spec.md` no vault (`02 - Projetos/Ativos/`), acessível via MCP obsidian. O brief de negócio/infra é `PetDash.md`. Este arquivo resume o que uma instância do Claude precisa saber para não violar as invariantes do domínio; a spec manda em caso de conflito.
+> Fonte de verdade da modelagem e do escopo: `PetDash - Spec.md` no vault (`02 - Projetos/Ativos/`, via MCP obsidian) e o design doc + Tasks no repo. O brief de negócio/infra é `PetDash.md`. Este arquivo resume o que uma instância do Claude precisa saber para não violar as invariantes do domínio; a spec/design doc mandam em caso de conflito. **Não reabra decisões fechadas sem me perguntar.**
 
-## Estado do repositório
+## Contexto
 
-Greenfield. O repo ainda não tem código, é dirigido pela spec. O sistema nasce vazio (sem migração de dados legados). Ao scaffoldar, seguir a stack e a ordem de modelagem abaixo.
+Greenfield. O repo nasce vazio, dirigido pela spec (sem migração de dados legados). App web full-stack de gestão operacional e financeira do spa/estética animal **Ângelo Spa Animal**, substituindo o controle por planilha (~130 atendimentos/mês). Usuária única: **Patricia** (dona).
 
-## O produto
-
-App web full-stack de gestão operacional e financeira do spa/estética animal **Ângelo Spa Animal**. Usuária única: **Patricia** (dona), substituindo o controle por planilha (~130 atendimentos/mês). Consequências de projeto:
+Priorize entregar o MVP **funcional e correto**. Nada de over-engineering: escopo mínimo, bem-feito. Consequências de projeto:
 
 - **Single-user.** Autenticação simples, sem RBAC nem multiusuário. Não construir permissões/papéis.
 - **Sem migração** no MVP.
 - **100% web em produção** (a máquina da Patricia é fraca). Nada de processo pesado no cliente dela.
 
+## Fluxo de trabalho (obrigatório)
+
+1. Antes de codar qualquer coisa não-trivial: **plan mode**. Apresente o plano e **espere meu ok**. Só implemente depois.
+2. **Um PR por vez**, seguindo o arquivo de Tasks (branches nomeadas como lá). Não pule adiante nem misture PRs.
+3. **Verificação é obrigatória.** Nunca diga "funciona" sem mostrar evidência: o comando rodado e a saída do `pytest`. Sem teste passando, o PR não está pronto.
+4. Rode `ruff` e a suíte de testes antes de considerar qualquer PR concluído.
+5. Commits pequenos e descritivos, em português.
+6. **Ao concluir cada PR, gerar um relatório didático** em `estudos/` (pasta não versionada). Formato: nome do PR, tarefas feitas e **justificativa de cada escolha** (por que fiz assim e segui por esse caminho). Público-alvo: eu, dev júnior, para entender o código a fundo e explicar numa entrevista — linguagem clara, com os conceitos por trás, não só o "o quê". Um arquivo por PR: `estudos/PR-XX-<slug>.md`.
+
+## Contrato de aprendizado
+
+> Se este projeto passar para **Modo Velocidade**, remova esta seção ou troque por: "Pode implementar tudo; eu reviso o diff."
+
+- **A lógica de Pacote Fidelidade (crédito, saldo, faturamento) é MINHA de escrever.** Nos models de operação e no manager/serviço de faturamento e saldo: **não implemente**. Proponha o plano, aponte alternativas e trade-offs, e **revise a MINHA implementação** como um sênior faria — encontre bugs e casos não cobertos, mas não escreva o código por mim.
+- **Todo o resto** (scaffold, auth, CRUD, ViewSets simples, frontend): **pode implementar direto**; eu reviso o diff. (Otimização: aprendo fundo a peça mais difícil, entrego rápido o resto.)
+
 ## Stack e deploy
 
-- Backend: **Django + Django REST Framework**.
+- Backend: **Django + Django REST Framework**. Auth: `simplejwt`.
 - Frontend: **React (Vite) + Tailwind**.
 - Banco: **PostgreSQL**.
+- Dev: **Docker**. Testes: `pytest-django` + `factory_boy`. Lint/format: `ruff`.
 - Produção: backend + Postgres no **Railway**, frontend no **Vercel**. Dev local na máquina do Diogo.
 
 ### Comandos (quando scaffoldado)
@@ -33,6 +48,7 @@ python manage.py makemigrations     # gera migrations a partir dos models
 python manage.py runserver          # sobe a API local
 pytest                              # roda a suíte (pytest-django)
 pytest caminho/test_x.py::test_y    # roda um único teste
+ruff check .                        # lint
 ```
 
 Frontend Vite:
@@ -43,14 +59,6 @@ npm run build    # build de produção
 npm run test     # testes de componente (Vitest + RTL)
 ```
 
-## Ferramentas de IA fora do versionamento
-
-Pastas de tooling de IA (skills/plugins/caches do Claude Code) **não sobem para o repo**. Já ignoradas no `.gitignore`: `.claude/` e `.impeccable/`. Ao adicionar outra ferramenta que crie pasta local no projeto, ignorá-la também.
-
-## Lovable = só protótipo visual (regra permanente)
-
-Telas geradas no Lovable são **referência visual estática**, nunca backend. Ao prompar no Lovable, sempre exigir "sem backend, sem Supabase, dados mockados em array local". Antes de portar qualquer componente Lovable para o repo, rodar `grep -r "supabase"` no export e remover todo resquício antes de ligar na API DRF.
-
 ## Arquitetura do domínio
 
 Modelo de dados (ver ERD completo na spec). Entidades: `Tutor` 1-N `Pet`; `Pet` 1-N `Atendimento` e 1-N `PacoteContratado`; `Servico` referencia `Atendimento` e define `PacoteContratado`; `PacoteContratado` 1-N `Atendimento` (consumo); `Atendimento` 1-N `Pagamento`. Mais `Custo` e `Retirada` independentes.
@@ -59,7 +67,7 @@ Ordem de implementação dos models: `Tutor`, `Pet`, `Servico` (sem dependência
 
 ### Invariantes de negócio (não são óbvias no código, quebrar aqui corrompe faturamento)
 
-Estas são o núcleo do projeto. Encapsular a regra de faturamento num manager/método do model, nunca espalhar por views.
+Estas decisões estão **fechadas** e são o núcleo do projeto. Se algo no código as contrariar, **PARE e me avise**. Encapsular a regra de faturamento num manager/método do model, nunca espalhar por views.
 
 1. **Faturamento em regime de caixa.** Faturamento de um período = soma de `PacoteContratado.valor_pago` com `data_compra` no período + soma de `Atendimento.valor` dos **avulsos** (`pacote_id IS NULL`) com status `Liberado` no período. Atendimento de consumo de pacote **não** soma (já foi pago na venda). Esquecer o filtro `pacote_id IS NULL` conta o dinheiro do pacote duas vezes.
 
@@ -75,7 +83,7 @@ Estas são o núcleo do projeto. Encapsular a regra de faturamento num manager/m
 
 7. **Pricing snapshotado.** `Atendimento.valor` é o preço cobrado no dia. `Servico.preco_padrao` é só sugestão de preenchimento. Faturamento histórico **jamais** faz JOIN com o catálogo.
 
-8. **Pagamento é tabela dedicada (1-N), não enum.** Pagamento misto (Pix R$80 + Dinheiro R$40) = N linhas de `Pagamento`. Conciliação por método sai de `GROUP BY metodo`.
+8. **Pagamento é tabela dedicada (1-N), não enum.** `forma_pagamento` **não** existe como enum no Atendimento. Pagamento simples = 1 linha; misto (Pix R$80 + Dinheiro R$40) = N linhas de `Pagamento`. Conciliação por método sai de `GROUP BY metodo`.
 
 9. **Financeiro é derivado, nunca materializado.** Faturamento, ticket médio, lucro, margem, saldo são agregações em query. Nada persistido (evita drift).
 
@@ -90,6 +98,30 @@ Estas são o núcleo do projeto. Encapsular a regra de faturamento num manager/m
 - `UNIQUE(pet_id, competencia)` no `PacoteContratado`.
 - Todo atendimento de pet com pacote ativo no mês precisa gravar `pacote_id`; se esquecer, vira avulso e fatura em dobro. Forçar/sugerir na UI.
 - Saldo do pacote = `qtd_total - COUNT(... WHERE status != 'Cancelado')`.
+
+## Testes
+
+- Toda invariante acima merece teste. Priorize: exclusão de pacote do faturamento · saldo derivado · ocupação/estorno de crédito por status · soft-delete não some do histórico.
+- Use `factory_boy` para dados de teste.
+- **Oráculo de verificação financeira:** os números do dashboard (faturamento / margem / ticket médio) têm gabarito na planilha real `controle_financeiro_pet.xlsx`. Quando eu pedir, compare o computado com a planilha.
+
+## Ferramentas de IA fora do versionamento
+
+Pastas de tooling de IA (skills/plugins/caches do Claude Code) **não sobem para o repo**. Já ignoradas no `.gitignore`: `.claude/` e `.impeccable/`. Ao adicionar outra ferramenta que crie pasta local no projeto, ignorá-la também.
+
+## Lovable = só protótipo visual (regra permanente)
+
+Telas geradas no Lovable são **referência visual estática**, nunca backend. Ao prompar no Lovable, sempre exigir "sem backend, sem Supabase, dados mockados em array local". Antes de portar qualquer componente Lovable para o repo, rodar `grep -r "supabase"` no export e **remover todo resquício** — os dados vêm da API DRF, nunca de Supabase. Tailwind com os tokens da marca (brand-book).
+
+## O que NÃO fazer
+
+- Nada de over-engineering nem features fora do MVP. O backlog (agenda visual, meta mensal, conciliação "fechar o mês", saldo bancário, busca global, notificações, PWA/offline) está **fora**. Se achar que algo do backlog é necessário, **pergunte**.
+- Não materializar valores financeiros. Não criar `qtd_usada`. Não usar enum de forma de pagamento. (Erros clássicos que contrariam a Spec.)
+- Não reabrir decisões de modelagem fechadas sem me consultar.
+
+## Regras rígidas → hooks
+
+O que PRECISA acontecer sempre não deve viver só neste texto (instrução em markdown é seguida ~70% das vezes). Configure (ou me lembre de configurar) **hooks**: `ruff` no write · rodar `pytest` após edições em models/serviços · bloquear commit com teste quebrado. Hook é garantido; texto é sugestão.
 
 ## Risco conhecido, fora do MVP
 
