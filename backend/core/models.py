@@ -116,5 +116,46 @@ class Atendimento(models.Model):
     
     def __str__(self):
         return f"{self.servico} ({self.pet.nome}) {self.data}"
+
+
+class Pagamento(models.Model):
+    class Metodo(models.TextChoices):
+        PIX = "Pix", "Pix"
+        CARTAO = "Cartao", "Cartão"
+        DINHEIRO = "Dinheiro", "Dinheiro"
+
+    atendimento = models.ForeignKey(
+        Atendimento, on_delete=models.CASCADE, related_name="pagamentos"
+    )
+    metodo = models.CharField(max_length=10, choices=Metodo.choices)
+    valor = models.DecimalField(max_digits=8, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.metodo} · R$ {self.valor}"
+
+
+class Custo(models.Model):
+    class Tipo(models.TextChoices):
+        FIXO = "fixo", "Fixo"
+        VARIAVEL = "variavel", "Variável"
+
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    descricao = models.CharField(max_length=200)
+    valor = models.DecimalField(max_digits=8, decimal_places=2)
+    categoria = models.CharField(max_length=60, blank=True, default="")
+    competencia = models.DateField(help_text="Dia 1 do mês de referência")
+
+    def __str__(self):
+        return f"{self.descricao} · {self.competencia:%m/%Y}"
+
+
+class Retirada(models.Model):
+    descricao = models.CharField(max_length=200)
+    valor = models.DecimalField(max_digits=8, decimal_places=2)
+    data = models.DateField()
+    tipo = models.CharField(max_length=60, blank=True, default="")
+
+    def __str__(self):
+        return f"{self.descricao} · {self.data}"
     
     

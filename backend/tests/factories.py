@@ -50,5 +50,33 @@ class AtendimentoFactory(factory.django.DjangoModelFactory):
     valor = Decimal("95.00")
     horario = time(10, 0)
     data = date(2026, 7, 30)
+
+
+class PagamentoFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.Pagamento
+
+    atendimento = factory.SubFactory(AtendimentoFactory)
+    metodo = "Pix"
+    valor = Decimal("95.00")
+
+
+class CustoFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.Custo
+
+    tipo = "fixo"
+    descricao = "Aluguel"
+    valor = Decimal("2400.00")
+    competencia = date(2026, 6, 1)
+
+
+class RetiradaFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.Retirada
+
+    descricao = "Pró-labore"
+    valor = Decimal("500.00")
+    data = date(2026, 6, 15)
     
     

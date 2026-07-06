@@ -5,7 +5,13 @@ import pytest
 from django.db import IntegrityError
 
 from core.models import Atendimento
-from tests.factories import AtendimentoFactory, PacoteContratadoFactory
+from tests.factories import (
+    AtendimentoFactory,
+    CustoFactory,
+    PacoteContratadoFactory,
+    PagamentoFactory,
+    RetiradaFactory,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -72,3 +78,23 @@ def test_queryset_avulsos_liberados_no_periodo():
         date(2026, 6, 1), date(2026, 6, 30)
     )
     assert list(resultado) == [avulso_no_periodo]
+
+
+def test_pagamento_misto_sao_duas_linhas():
+    # Invariante #8: pagamento misto = N linhas na tabela Pagamento, não enum.
+    atendimento = AtendimentoFactory(valor=Decimal("120.00"))
+    PagamentoFactory(atendimento=atendimento, metodo="Pix", valor=Decimal("80.00"))
+    PagamentoFactory(atendimento=atendimento, metodo="Dinheiro", valor=Decimal("40.00"))
+    assert atendimento.pagamentos.count() == 2
+
+
+def test_custo_tem_tipo_e_competencia_mensal():
+    custo = CustoFactory(competencia=date(2026, 6, 1))
+    assert custo.tipo == "fixo"
+    assert custo.competencia == date(2026, 6, 1)
+
+
+def test_retirada_registra_valor_e_data():
+    retirada = RetiradaFactory()
+    assert retirada.valor == Decimal("500.00")
+    assert retirada.data == date(2026, 6, 15)
