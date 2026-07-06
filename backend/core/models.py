@@ -1,3 +1,5 @@
+import datetime
+
 from django.db import models
 
 
@@ -45,3 +47,115 @@ class Servico(models.Model):
 
     def __str__(self):
         return self.nome
+
+
+class PacoteContratado(models.Model):
+    pet = models.ForeignKey(Pet, on_delete=models.PROTECT, related_name="pacotes")
+    servico = models.ForeignKey(Servico, on_delete=models.PROTECT, related_name="pacotes")
+    competencia = models.DateField(default=datetime.date.today)
+    qtd_total = models.PositiveSmallIntegerField(default=4)
+    valor_pago = models.DecimalField(max_digits=8, decimal_places=2)
+    data_compra = models.DateField(default=datetime.date.today)
+    validade = models.DateField()
+    ativo = models.BooleanField(default=True)
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["pet", "competencia"], name="unique_pacote_pet_competencia"
+                ),
+        ]
+    
+    def __str__(self):
+        return f"{self.servico} ({self.pet.nome}) {self.competencia:%m/%Y}"
+
+    def save(self, *args, **kwargs):
+        self.competencia = self.competencia.replace(day=1)
+        super().save(*args, **kwargs)
+
+    def saldo(self):
+        return self.qtd_total - self.atendimentos.exclude(
+            status=Atendimento.Status.CANCELADO
+            ).count()
+
+
+class AtendimentoQuerySet(models.QuerySet):
+    def liberados(self):
+        return self.filter(status=Atendimento.Status.LIBERADO)
+    
+    def avulsos(self):
+        return self.filter(pacote__isnull=True)
+    
+    def no_periodo(self, inicio, fim):
+        return self.filter(data__gte=inicio, data__lte=fim)
+
+
+class Atendimento(models.Model):
+    class Status(models.TextChoices):
+        LIBERADO = "Liberado", "Liberado"
+        PENDENTE = "Pendente", "Pendente"
+        CANCELADO = "Cancelado", "Cancelado"
+    
+    pet = models.ForeignKey(Pet, on_delete=models.PROTECT, related_name="atendimentos")
+    servico = models.ForeignKey(Servico, on_delete=models.PROTECT, related_name="atendimentos")
+    pacote = models.ForeignKey(
+        PacoteContratado,
+        on_delete=models.PROTECT,
+        related_name="atendimentos",
+        null=True,
+        blank=True)
+    data = models.DateField(default=datetime.date.today)
+    horario = models.TimeField()
+    valor = models.DecimalField(max_digits=8, decimal_places=2)
+    transporte = models.BooleanField(default=False)
+    transporte_valor = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDENTE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    objects = AtendimentoQuerySet.as_manager()
+    
+    def __str__(self):
+        return f"{self.servico} ({self.pet.nome}) {self.data}"
+
+
+class Pagamento(models.Model):
+    class Metodo(models.TextChoices):
+        PIX = "Pix", "Pix"
+        CARTAO = "Cartao", "Cartão"
+        DINHEIRO = "Dinheiro", "Dinheiro"
+
+    atendimento = models.ForeignKey(
+        Atendimento, on_delete=models.CASCADE, related_name="pagamentos"
+    )
+    metodo = models.CharField(max_length=10, choices=Metodo.choices)
+    valor = models.DecimalField(max_digits=8, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.metodo} · R$ {self.valor}"
+
+
+class Custo(models.Model):
+    class Tipo(models.TextChoices):
+        FIXO = "fixo", "Fixo"
+        VARIAVEL = "variavel", "Variável"
+
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    descricao = models.CharField(max_length=200)
+    valor = models.DecimalField(max_digits=8, decimal_places=2)
+    categoria = models.CharField(max_length=60, blank=True, default="")
+    competencia = models.DateField(help_text="Dia 1 do mês de referência")
+
+    def __str__(self):
+        return f"{self.descricao} · {self.competencia:%m/%Y}"
+
+
+class Retirada(models.Model):
+    descricao = models.CharField(max_length=200)
+    valor = models.DecimalField(max_digits=8, decimal_places=2)
+    data = models.DateField()
+    tipo = models.CharField(max_length=60, blank=True, default="")
+
+    def __str__(self):
+        return f"{self.descricao} · {self.data}"
+    
+    
