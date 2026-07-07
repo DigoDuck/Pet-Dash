@@ -22,3 +22,16 @@ class TutorViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         instance.ativo = False
         instance.save()
+
+
+class PetViewSet(viewsets.ModelViewSet):
+    serializer_class = serializers.PetSerializer
+    search_fields = ["nome", "tutor__nome"]
+    filterset_fields = ["tutor", "porte"]
+
+    def get_queryset(self):
+        return models.Pet.objects.filter(ativo=True).select_related("tutor").order_by("nome")
+
+    def perform_destroy(self, instance):
+        instance.ativo = False
+        instance.save()

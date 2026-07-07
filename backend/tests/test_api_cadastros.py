@@ -43,3 +43,18 @@ def test_destroy_tutor_e_soft_delete(api):
     tutor.refresh_from_db()
     assert tutor.ativo is False
     assert api.get("/api/tutores/").json()["count"] == 0
+
+
+def test_cria_pet_vinculado_ao_tutor(api):
+    tutor = TutorFactory()
+    resp = api.post("/api/pets/", {"tutor": tutor.id, "nome": "Rex", "raca": "SRD"})
+    assert resp.status_code == 201
+    assert resp.json()["tutor_nome"] == tutor.nome
+
+
+def test_filtra_pets_por_tutor(api):
+    t1 = TutorFactory()
+    PetFactory(tutor=t1)
+    PetFactory()  # outro tutor
+    resp = api.get(f"/api/pets/?tutor={t1.id}")
+    assert resp.json()["count"] == 1
