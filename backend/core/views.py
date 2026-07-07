@@ -35,3 +35,10 @@ class PetViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         instance.ativo = False
         instance.save()
+
+
+class ServicoViewSet(viewsets.ModelViewSet):
+    serializer_class = serializers.ServicoSerializer
+    search_fields = ["nome"]
+    filterset_fields = ["is_pacote", "ativo"]
+    queryset = models.Servico.objects.all().order_by("nome")

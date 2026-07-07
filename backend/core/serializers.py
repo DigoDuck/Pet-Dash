@@ -19,3 +19,9 @@ class PetSerializer(serializers.ModelSerializer):
             "id", "tutor", "tutor_nome", "nome", "raca", "porte", "ativo", "created_at",
         ]
         read_only_fields = ["ativo", "created_at"]
+
+
+class ServicoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Servico
+        fields = ["id", "nome", "preco_padrao", "is_pacote", "creditos", "ativo"]

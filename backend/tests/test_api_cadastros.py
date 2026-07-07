@@ -58,3 +58,11 @@ def test_filtra_pets_por_tutor(api):
     PetFactory()  # outro tutor
     resp = api.get(f"/api/pets/?tutor={t1.id}")
     assert resp.json()["count"] == 1
+
+
+def test_cria_e_filtra_servico_pacote(api):
+    ServicoFactory(nome="Banho", is_pacote=False)
+    ServicoFactory(nome="Pacote Fidelidade", is_pacote=True, creditos=4)
+    resp = api.get("/api/servicos/?is_pacote=true")
+    assert resp.json()["count"] == 1
+    assert resp.json()["results"][0]["nome"] == "Pacote Fidelidade"
