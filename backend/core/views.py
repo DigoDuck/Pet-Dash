@@ -1,5 +1,7 @@
+from datetime import date
+
 from rest_framework import viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
@@ -36,12 +38,32 @@ class PetViewSet(viewsets.ModelViewSet):
         instance.ativo = False
         instance.save()
 
+    @action(detail=True, methods=["get"], url_path="pacote-ativo")
+    def pacote_ativo(self, request, pk=None):
+        competencia_param = request.query_params.get("competencia")
+        if competencia_param:
+            competencia = date.fromisoformat(competencia_param).replace(day=1)
+        else:
+            competencia = date.today().replace(day=1)
+
+        pacote = models.PacoteContratado.objects.filter(
+            pet_id=pk, competencia=competencia, ativo=True
+        ).first()
+        if pacote is None:
+            return Response(status=204)
+        return Response(serializers.PacoteContratadoSerializer(pacote).data)
+
 
 class ServicoViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.ServicoSerializer
     search_fields = ["nome"]
     filterset_fields = ["is_pacote", "ativo"]
     queryset = models.Servico.objects.all().order_by("nome")
+
+
+class PacoteContratadoViewSet(viewsets.ModelViewSet):
+    serializer_class = serializers.PacoteContratadoSerializer
+    queryset = models.PacoteContratado.objects.all().order_by("-competencia")
 
 
 class AtendimentoViewSet(viewsets.ModelViewSet):
