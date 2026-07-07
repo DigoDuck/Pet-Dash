@@ -25,3 +25,96 @@ class ServicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Servico
         fields = ["id", "nome", "preco_padrao", "is_pacote", "creditos", "ativo"]
+
+
+class PagamentoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Pagamento
+        fields = ["id", "metodo", "valor"]
+        
+        
+class PacoteContratadoSerializer(serializers.ModelSerializer):
+    saldo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.PacoteContratado
+        fields = [
+            "id", "pet", "servico", "competencia", "qtd_total", "valor_pago",
+            "data_compra", "validade", "saldo",
+        ]
+
+    def get_saldo(self, obj):
+        return obj.saldo()
+
+    def validate(self, attrs):
+        pet = attrs.get("pet", getattr(self.instance, "pet", None))
+        competencia = attrs.get("competencia", getattr(self.instance, "competencia", None))
+        if pet and competencia:
+            competencia_normalizada = competencia.replace(day=1)
+            qs = models.PacoteContratado.objects.filter(
+                pet=pet, competencia=competencia_normalizada
+            )
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    "Já existe um pacote para este pet nesta competência."
+                )
+        return attrs
+
+
+class AtendimentoSerializer(serializers.ModelSerializer):
+    pagamentos = PagamentoSerializer(many=True, required=False)
+
+    class Meta:
+        model = models.Atendimento
+        fields = [
+            "id", "pet", "servico", "pacote", "data", "horario", "valor",
+            "transporte", "transporte_valor", "status", "pagamentos",
+        ]
+
+    def create(self, validated_data):
+        pagamentos = validated_data.pop("pagamentos", [])
+        atendimento = models.Atendimento.objects.create(**validated_data)
+        for pag in pagamentos:
+            models.Pagamento.objects.create(atendimento=atendimento, **pag)
+        return atendimento
+
+    def update(self, instance, validated_data):
+        pagamentos = validated_data.pop("pagamentos", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if pagamentos is not None:
+            instance.pagamentos.all().delete()
+            for pag in pagamentos:
+                models.Pagamento.objects.create(atendimento=instance, **pag)
+        return instance
+
+    def validate(self, attrs):
+        # No PATCH, os campos podem não vir; herdar do instance (update parcial).
+        pacote = attrs.get("pacote", getattr(self.instance, "pacote", None))
+
+        if pacote is None:
+            pagamentos = attrs.get("pagamentos", [])
+            if pagamentos:
+                valor_atendimento = attrs.get("valor", getattr(self.instance, "valor", 0))
+                valor_pagamentos = sum(p.get("valor", 0) for p in pagamentos)
+                if valor_atendimento != valor_pagamentos:
+                    raise serializers.ValidationError(
+                        "O valor do atendimento deve ser igual à soma dos pagamentos."
+                    )
+        else:
+            status = attrs.get("status", getattr(self.instance, "status", None))
+            ocupa_credito = status != models.Atendimento.Status.CANCELADO
+            # Créditos ocupados por OUTROS atendimentos: no update, exclui o próprio,
+            # senão editar um atendimento que já ocupa o crédito daria 400 indevido.
+            ocupados = pacote.atendimentos.exclude(status=models.Atendimento.Status.CANCELADO)
+            if self.instance is not None:
+                ocupados = ocupados.exclude(pk=self.instance.pk)
+            if ocupa_credito and pacote.qtd_total - ocupados.count() <= 0:
+                raise serializers.ValidationError(
+                    "O pacote não possui saldo suficiente para este atendimento."
+                )
+
+        return attrs

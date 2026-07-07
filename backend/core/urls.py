@@ -7,6 +7,8 @@ router = DefaultRouter()
 router.register("tutores", views.TutorViewSet, basename="tutor")
 router.register("pets", views.PetViewSet, basename="pet")
 router.register("servicos", views.ServicoViewSet, basename="servico")
+router.register("atendimentos", views.AtendimentoViewSet, basename="atendimento")
+router.register("pacotes", views.PacoteContratadoViewSet, basename="pacote")
 
 urlpatterns = [
     path("health/", views.healthcheck, name="health"),
