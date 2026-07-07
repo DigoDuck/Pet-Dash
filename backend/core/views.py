@@ -42,3 +42,16 @@ class ServicoViewSet(viewsets.ModelViewSet):
     search_fields = ["nome"]
     filterset_fields = ["is_pacote", "ativo"]
     queryset = models.Servico.objects.all().order_by("nome")
+
+
+class AtendimentoViewSet(viewsets.ModelViewSet):
+    serializer_class = serializers.AtendimentoSerializer
+    filterset_fields = ["status", "pet", "data", "pacote"]
+    ordering_fields = ["data", "horario"]
+
+    def get_queryset(self):
+        return (
+            models.Atendimento.objects.select_related("pet", "servico", "pacote")
+            .prefetch_related("pagamentos")
+            .order_by("-data", "-horario")
+        )

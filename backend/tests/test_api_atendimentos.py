@@ -31,3 +31,12 @@ def test_cria_atendimento_avulso_com_pagamentos_aninhados(api):
     assert resp.status_code == 201, resp.content
     atendimento = Atendimento.objects.get(id=resp.json()["id"])
     assert atendimento.pagamentos.count() == 2
+
+
+def test_filtra_atendimentos_por_status(api):
+    from tests.factories import AtendimentoFactory
+
+    AtendimentoFactory(status="Liberado")
+    AtendimentoFactory(status="Pendente")
+    resp = api.get("/api/atendimentos/?status=Liberado")
+    assert resp.json()["count"] == 1
