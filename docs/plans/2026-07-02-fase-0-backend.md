@@ -58,9 +58,11 @@ backend/
 ### Task 1: Pré-requisitos, branch e dependências
 
 **Files:**
+
 - Create: `backend/requirements.txt`, `backend/requirements-dev.txt`
 
 **Interfaces:**
+
 - Produces: venv em `backend/.venv` com Django/DRF/pytest instalados; usado por todas as tasks seguintes. Comando python nas tasks seguintes = `backend/.venv/Scripts/python.exe` (Windows).
 
 - [ ] **Step 1: Verificar pré-requisitos**
@@ -78,6 +80,7 @@ git checkout main && git pull && git checkout -b chore/backend-scaffold
 - [ ] **Step 3: Criar requirements**
 
 `backend/requirements.txt`:
+
 ```
 Django>=5.2,<6.0
 djangorestframework>=3.16
@@ -86,6 +89,7 @@ psycopg[binary]>=3.2
 ```
 
 `backend/requirements-dev.txt`:
+
 ```
 pytest>=8.3
 pytest-django>=4.11
@@ -99,6 +103,7 @@ ruff>=0.11
 cd backend && python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt -r requirements-dev.txt
 ```
+
 Expected: instalação sem erros.
 
 - [ ] **Step 5: Commit**
@@ -111,10 +116,12 @@ git commit -m "chore: add backend dependency manifests"
 ### Task 2: Projeto Django, settings por env e smoke test
 
 **Files:**
+
 - Create: `backend/manage.py`, `backend/config/*` (via startproject), `backend/core/` (via startapp), `backend/.env.example`, `backend/.env` (local, não commitado), `backend/tests/__init__.py`, `backend/tests/test_smoke.py`
 - Modify: `backend/config/settings.py` (substituir por completo), `.gitignore` (raiz)
 
 **Interfaces:**
+
 - Produces: `config.settings` lendo `SECRET_KEY`, `DEBUG`, `DATABASE_URL`, `ALLOWED_HOSTS` do ambiente; app `core` instalado; banco local `petdash` migrado. Todas as tasks de teste seguintes dependem disso.
 
 - [ ] **Step 1: Gerar projeto e app**
@@ -203,6 +210,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 - [ ] **Step 3: Criar `.env.example` (commitado) e `.env` (local)**
 
 `backend/.env.example`:
+
 ```
 SECRET_KEY=change-me
 DEBUG=true
@@ -211,10 +219,12 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 ```
 
 Copiar para `backend/.env` e gerar uma SECRET_KEY real:
+
 ```bash
 cp .env.example .env
 .venv/Scripts/python.exe -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
+
 Colar a chave gerada no `.env`.
 
 - [ ] **Step 4: Atualizar `.gitignore` da raiz (append)**
@@ -234,6 +244,7 @@ backend/staticfiles/
 psql -U postgres -c "CREATE USER petdash WITH PASSWORD 'petdash' CREATEDB;" -c "CREATE DATABASE petdash OWNER petdash;"
 .venv/Scripts/python.exe manage.py migrate
 ```
+
 Expected: `Applying ... OK` para as migrations padrão. (Se usou Docker no Task 1, o banco já existe; rodar só o migrate.)
 
 - [ ] **Step 6: Escrever o smoke test**
@@ -241,6 +252,7 @@ Expected: `Applying ... OK` para as migrations padrão. (Se usou Docker no Task 
 `backend/tests/__init__.py`: arquivo vazio.
 
 `backend/tests/test_smoke.py`:
+
 ```python
 import pytest
 
@@ -261,9 +273,11 @@ git commit -m "chore: scaffold Django project with env-driven settings"
 ### Task 3: pytest + ruff + CI, abrir o PR 1
 
 **Files:**
+
 - Create: `backend/pyproject.toml`, `.github/workflows/ci.yml`
 
 **Interfaces:**
+
 - Produces: `pytest` executável de `backend/` sem flags; `ruff check .` limpo; CI rodando ambos em todo PR. Todos os PRs seguintes dependem deste gate.
 
 - [ ] **Step 1: Criar `backend/pyproject.toml`**
@@ -350,10 +364,12 @@ gh pr create --title "chore: backend scaffold (Django + DRF + CI)" --body "Djang
 ### Task 4: Models Tutor, Pet e Servico (TDD)
 
 **Files:**
+
 - Create: `backend/tests/factories.py`, `backend/tests/test_models_base.py`, `backend/core/migrations/0001_initial.py` (gerada)
 - Modify: `backend/core/models.py`
 
 **Interfaces:**
+
 - Consumes: scaffold do PR 1.
 - Produces: models `core.Tutor`, `core.Pet`, `core.Servico`; factories `TutorFactory`, `PetFactory`, `ServicoFactory` (import: `from tests.factories import ...`). O PR 3 constrói sobre os três.
 
@@ -366,6 +382,7 @@ git checkout main && git pull && git checkout -b feat/models-base
 - [ ] **Step 2: Escrever factories e testes que falham**
 
 `backend/tests/factories.py`:
+
 ```python
 from decimal import Decimal
 
@@ -400,6 +417,7 @@ class ServicoFactory(factory.django.DjangoModelFactory):
 ```
 
 `backend/tests/test_models_base.py`:
+
 ```python
 import pytest
 from django.db.models.deletion import ProtectedError
@@ -442,6 +460,7 @@ Expected: FAIL/ERROR com `AttributeError: module 'core.models' has no attribute 
 - [ ] **Step 4: Escrever os models**
 
 Substituir `backend/core/models.py` por:
+
 ```python
 from django.db import models
 
@@ -498,6 +517,7 @@ class Servico(models.Model):
 .venv/Scripts/python.exe manage.py makemigrations core
 .venv/Scripts/python.exe -m pytest tests/test_models_base.py -v
 ```
+
 Expected: migration `0001_initial.py` criada; `4 passed`.
 
 - [ ] **Step 6: Commit**
@@ -510,14 +530,17 @@ git commit -m "feat: add Tutor, Pet and Servico models with soft-delete and PROT
 ### Task 5: Admin dos models base, abrir o PR 2
 
 **Files:**
+
 - Modify: `backend/core/admin.py`
 
 **Interfaces:**
+
 - Produces: admin navegável para conferência manual de dados durante o desenvolvimento.
 
 - [ ] **Step 1: Registrar no admin**
 
 Substituir `backend/core/admin.py` por:
+
 ```python
 from django.contrib import admin
 
@@ -566,10 +589,12 @@ gh pr create --title "feat: base models (Tutor, Pet, Servico)" --body "First dom
 ### Task 6: PacoteContratado e Atendimento — constraint, saldo e ciclo de status (TDD)
 
 **Files:**
+
 - Create: `backend/tests/test_models_operacao.py`, `backend/core/migrations/0002_*.py` (gerada)
 - Modify: `backend/core/models.py` (append), `backend/tests/factories.py` (append)
 
 **Interfaces:**
+
 - Consumes: `Tutor`/`Pet`/`Servico` e factories do PR 2.
 - Produces: `core.PacoteContratado` (método `saldo() -> int`, constraint `unique_pacote_pet_competencia`), `core.Atendimento` (`Atendimento.Status` com valores `"Liberado"`, `"Pendente"`, `"Cancelado"`; manager `Atendimento.objects` com `.liberados()`, `.avulsos()`, `.no_periodo(inicio, fim)`). Task 8 consome tudo isso.
 
@@ -582,6 +607,7 @@ git checkout main && git pull && git checkout -b feat/models-operacao
 - [ ] **Step 2: Escrever os testes que falham**
 
 `backend/tests/test_models_operacao.py`:
+
 ```python
 from datetime import date, time
 from decimal import Decimal
@@ -665,6 +691,7 @@ def test_horario_padrao_e_status_padrao():
 ```
 
 Append em `backend/tests/factories.py`:
+
 ```python
 from datetime import date, time  # mover para o topo do arquivo, junto do import de Decimal
 
@@ -702,6 +729,7 @@ Expected: ERROR com `AttributeError: module 'core.models' has no attribute 'Paco
 - [ ] **Step 4: Implementar os models**
 
 Append em `backend/core/models.py`:
+
 ```python
 class PacoteContratado(models.Model):
     pet = models.ForeignKey(Pet, on_delete=models.PROTECT, related_name="pacotes")
@@ -779,6 +807,7 @@ class Atendimento(models.Model):
 .venv/Scripts/python.exe manage.py makemigrations core
 .venv/Scripts/python.exe -m pytest tests/test_models_operacao.py -v
 ```
+
 Expected: `7 passed`.
 
 - [ ] **Step 6: Commit**
@@ -791,10 +820,12 @@ git commit -m "feat: add PacoteContratado and Atendimento with derived saldo and
 ### Task 7: Pagamento, Custo e Retirada (TDD)
 
 **Files:**
+
 - Create: `backend/core/migrations/0003_*.py` (gerada)
 - Modify: `backend/core/models.py` (append), `backend/tests/factories.py` (append), `backend/tests/test_models_operacao.py` (append)
 
 **Interfaces:**
+
 - Consumes: `Atendimento` da Task 6.
 - Produces: `core.Pagamento` (`Pagamento.Metodo`: `"Pix"`, `"Cartao"`, `"Dinheiro"`; related_name `pagamentos`), `core.Custo` (`Custo.Tipo`: `"fixo"`, `"variavel"`), `core.Retirada`. Fase 1 consome nos serializers.
 
@@ -826,6 +857,7 @@ Expected: ERROR `ImportError: cannot import name 'PagamentoFactory'`.
 - [ ] **Step 3: Implementar models e factories**
 
 Append em `backend/core/models.py`:
+
 ```python
 class Pagamento(models.Model):
     class Metodo(models.TextChoices):
@@ -869,6 +901,7 @@ class Retirada(models.Model):
 ```
 
 Append em `backend/tests/factories.py`:
+
 ```python
 class PagamentoFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -895,6 +928,7 @@ class CustoFactory(factory.django.DjangoModelFactory):
 .venv/Scripts/python.exe manage.py makemigrations core
 .venv/Scripts/python.exe -m pytest tests/test_models_operacao.py -v
 ```
+
 Expected: `9 passed`.
 
 - [ ] **Step 5: Commit**
@@ -907,15 +941,18 @@ git commit -m "feat: add Pagamento, Custo and Retirada models"
 ### Task 8: Serviço de faturamento — a invariante central (TDD)
 
 **Files:**
+
 - Create: `backend/core/services.py`, `backend/tests/test_faturamento.py`
 
 **Interfaces:**
+
 - Consumes: models e queryset da Task 6/7.
 - Produces: `core.services.faturamento_periodo(inicio: date, fim: date) -> Decimal`. O endpoint de dashboard (Fase 1, PR 7) chama exatamente esta função — nunca reimplementa a soma.
 
 - [ ] **Step 1: Escrever os testes que falham**
 
 `backend/tests/test_faturamento.py`:
+
 ```python
 from datetime import date
 from decimal import Decimal
@@ -1002,6 +1039,7 @@ Expected: ERROR `ModuleNotFoundError: No module named 'core.services'`.
 - [ ] **Step 3: Implementar o serviço**
 
 `backend/core/services.py`:
+
 ```python
 """Regras financeiras derivadas — nunca materializadas (spec: evitar drift)."""
 
@@ -1051,9 +1089,11 @@ git commit -m "feat: add cash-basis faturamento service with invariant tests"
 ### Task 9: Admin dos models de operação, abrir o PR 3
 
 **Files:**
+
 - Modify: `backend/core/admin.py`
 
 **Interfaces:**
+
 - Produces: admin completo dos 8 models.
 
 - [ ] **Step 1: Registrar os novos models (append em `backend/core/admin.py`)**
