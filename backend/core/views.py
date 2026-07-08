@@ -4,8 +4,9 @@ from rest_framework import viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from . import models, serializers
+from . import models, serializers, services
 
 
 @api_view(["GET"])
@@ -64,6 +65,39 @@ class ServicoViewSet(viewsets.ModelViewSet):
 class PacoteContratadoViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.PacoteContratadoSerializer
     queryset = models.PacoteContratado.objects.all().order_by("-competencia")
+
+
+class CustoViewSet(viewsets.ModelViewSet):
+    serializer_class = serializers.CustoSerializer
+    filterset_fields = ["tipo", "competencia"]
+    queryset = models.Custo.objects.all().order_by("-competencia")
+
+
+class RetiradaViewSet(viewsets.ModelViewSet):
+    serializer_class = serializers.RetiradaSerializer
+    filterset_fields = ["data"]
+    queryset = models.Retirada.objects.all().order_by("-data")
+
+
+class DashboardView(APIView):
+    def get(self, request):
+        try:
+            inicio = date.fromisoformat(request.query_params["inicio"])
+            fim = date.fromisoformat(request.query_params["fim"])
+        except KeyError:
+            return Response(
+                {"detail": "Parâmetros obrigatórios: inicio e fim (YYYY-MM-DD)."}, status=400
+            )
+        except ValueError:
+            return Response(
+                {"detail": "Data inválida; use o formato YYYY-MM-DD."}, status=400
+            )
+
+        kpis = serializers.DashboardSerializer(services.dashboard_periodo(inicio, fim)).data
+        vip = serializers.PetSerializer(services.pets_vip(inicio, fim), many=True).data
+        top = serializers.TopTutorSerializer(services.top_tutores(inicio, fim), many=True).data
+
+        return Response({**kpis, "vip": vip, "top_tutores": top})
 
 
 class AtendimentoViewSet(viewsets.ModelViewSet):
