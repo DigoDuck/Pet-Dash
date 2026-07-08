@@ -63,6 +63,18 @@ class PacoteContratadoSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class CustoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Custo
+        fields = ["id", "tipo", "descricao", "valor", "categoria", "competencia"]
+
+
+class RetiradaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Retirada
+        fields = ["id", "descricao", "valor", "data", "tipo"]
+
+
 class AtendimentoSerializer(serializers.ModelSerializer):
     pagamentos = PagamentoSerializer(many=True, required=False)
 

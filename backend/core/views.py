@@ -66,6 +66,18 @@ class PacoteContratadoViewSet(viewsets.ModelViewSet):
     queryset = models.PacoteContratado.objects.all().order_by("-competencia")
 
 
+class CustoViewSet(viewsets.ModelViewSet):
+    serializer_class = serializers.CustoSerializer
+    filterset_fields = ["tipo", "competencia"]
+    queryset = models.Custo.objects.all().order_by("-competencia")
+
+
+class RetiradaViewSet(viewsets.ModelViewSet):
+    serializer_class = serializers.RetiradaSerializer
+    filterset_fields = ["data"]
+    queryset = models.Retirada.objects.all().order_by("-data")
+
+
 class AtendimentoViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.AtendimentoSerializer
     filterset_fields = ["status", "pet", "data", "pacote"]
