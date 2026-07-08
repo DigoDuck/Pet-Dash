@@ -11,6 +11,8 @@
    Railway não acha o Django nem o `railway.toml`).
 3. No projeto: **Create → Database → PostgreSQL**.
 
+> O primeiro build automático (disparado ao conectar o repo) pode falhar: ele roda antes do Root Directory e das variáveis estarem configurados (sem `SECRET_KEY`, o `collectstatic` do build quebra). É esperado — configure as Seções 1 a 3 e dispare um **Redeploy**.
+
 ## 2. Variáveis de ambiente (serviço da API)
 
 | Variável | Valor | Observação |
@@ -19,7 +21,7 @@
 | `DEBUG` | `false` | |
 | `ALLOWED_HOSTS` | `<app>.up.railway.app,healthcheck.railway.app` | o healthchecker da Railway usa o host `healthcheck.railway.app` |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | reference ao serviço Postgres |
-| `CORS_ALLOWED_ORIGINS` | domínio do front na Vercel | atualizar quando o front existir |
+| `CORS_ALLOWED_ORIGINS` | `https://<front>.vercel.app` | com scheme `https://` (o system check do django-cors-headers falha sem ele e bloqueia o release); pode ficar sem setar até o front existir |
 | `CSRF_TRUSTED_ORIGINS` | `https://<app>.up.railway.app` | admin sob HTTPS |
 
 `SECURE_SSL_REDIRECT` não precisa ser setada (default `true` em produção).
@@ -37,11 +39,14 @@ só fica healthy quando `/api/health/` responder 200.
 
 ## 5. Superuser (Patricia)
 
-Painel do serviço → aba do container → **Shell** (ou `railway shell` no CLI):
+Com o CLI da Railway logado e linkado ao projeto (`railway link`), abrir um shell **dentro do container** do serviço da API:
 
 ```bash
+railway ssh
 python manage.py createsuperuser
 ```
+
+> Não usar `railway shell`: ele abre um subshell **local** com as env vars do serviço injetadas, e a `DATABASE_URL` de private networking (`postgres.railway.internal`) não resolve fora do container — o `createsuperuser` falharia na conexão.
 
 ## 6. Smoke test
 
