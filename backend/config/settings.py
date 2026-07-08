@@ -100,3 +100,16 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:5173"])
+
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # O healthcheck da Railway chega sem X-Forwarded-Proto; sem a isenção ele
+    # levaria 301 e o deploy nunca ficaria healthy.
+    SECURE_REDIRECT_EXEMPT = [r"^api/health/$"]
+    SECURE_HSTS_SECONDS = 2_592_000  # 30 dias; subir para 1 ano com o deploy estável
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
