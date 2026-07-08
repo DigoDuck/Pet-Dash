@@ -63,6 +63,37 @@ class PacoteContratadoSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class CustoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Custo
+        fields = ["id", "tipo", "descricao", "valor", "categoria", "competencia"]
+
+
+class RetiradaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Retirada
+        fields = ["id", "descricao", "valor", "data", "tipo"]
+
+
+class TopTutorSerializer(serializers.ModelSerializer):
+    gasto_total = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = models.Tutor
+        fields = ["id", "nome", "gasto_total"]
+
+
+class DashboardSerializer(serializers.Serializer):
+    # Todos os valores monetários saem como string ("315.00"), padrão DRF,
+    # para o front não receber float e string misturados na mesma resposta.
+    faturamento = serializers.DecimalField(max_digits=10, decimal_places=2)
+    custos = serializers.DecimalField(max_digits=10, decimal_places=2)
+    retiradas = serializers.DecimalField(max_digits=10, decimal_places=2)
+    lucro = serializers.DecimalField(max_digits=10, decimal_places=2)
+    ticket_medio = serializers.DecimalField(max_digits=10, decimal_places=2)
+    margem = serializers.DecimalField(max_digits=6, decimal_places=4)
+
+
 class AtendimentoSerializer(serializers.ModelSerializer):
     pagamentos = PagamentoSerializer(many=True, required=False)
 
