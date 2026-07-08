@@ -14,5 +14,6 @@ router.register("retiradas", views.RetiradaViewSet, basename="retirada")
 
 urlpatterns = [
     path("health/", views.healthcheck, name="health"),
+    path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
     path("", include(router.urls)),
 ]
