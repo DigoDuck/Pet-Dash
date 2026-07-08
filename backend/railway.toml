@@ -1,0 +1,14 @@
+# Config as code da Railway (builder Railpack).
+# O Root Directory do serviço no painel deve apontar para `backend`.
+
+[build]
+builder = "RAILPACK"
+buildCommand = "python manage.py collectstatic --noinput"
+
+[deploy]
+preDeployCommand = "python manage.py migrate"
+startCommand = "gunicorn config.wsgi --bind 0.0.0.0:$PORT"
+healthcheckPath = "/api/health/"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
