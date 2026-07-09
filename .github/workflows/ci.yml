@@ -25,6 +25,9 @@ jobs:
       DATABASE_URL: postgres://petdash:petdash@localhost:5432/petdash
       SECRET_KEY: ci-only-secret-key
       DEBUG: "false"
+      # O test client fala http; sem isto o SECURE_SSL_REDIRECT do bloco de
+      # produção (settings, DEBUG=false) devolve 301 para todos os testes de API.
+      SECURE_SSL_REDIRECT: "false"
     defaults:
       run:
         working-directory: backend
