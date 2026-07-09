@@ -23,7 +23,8 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://petdash:petdash@localhost:5432/petdash
-      SECRET_KEY: ci-only-secret-key
+      # 32+ bytes: chaves menores disparam InsecureKeyLengthWarning no HMAC do JWT.
+      SECRET_KEY: ci-only-secret-key-with-32-plus-bytes-0000
       DEBUG: "false"
       # O test client fala http; sem isto o SECURE_SSL_REDIRECT do bloco de
       # produção (settings, DEBUG=false) devolve 301 para todos os testes de API.
