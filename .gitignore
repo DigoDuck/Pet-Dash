@@ -40,6 +40,7 @@ pnpm-debug.log*
 
 # ==== Material de estudo pessoal (não versionar) ====
 estudos/
+graphify-out/
 
 # ==== Editores / SO ====
 .vscode/
