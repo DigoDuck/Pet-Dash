@@ -14,7 +14,8 @@ Scaffold do frontend em `frontend/`: app Vite + React + TypeScript + Tailwind v4
 | Componentes base | **Híbrido**: feitos à mão com Tailwind agora; Radix pontual só quando precisar de primitivo com a11y complexa (Dialog, Select) nos PRs 12–13 | Button/Badge/Card/Input são simples; entender 100% do código > dependências |
 | Armazenamento de tokens JWT | **localStorage para access + refresh** | Single-user, sem conteúdo de terceiros; sessão sobrevive a F5 sem bootstrap extra. Risco de XSS aceito no MVP |
 | Tailwind | **v4** (CSS-first, `@theme`, `@tailwindcss/vite`) | Versão atual; sem `tailwind.config.js` |
-| AppShell | **Nav completa + rotas stub** desde já | PRs futuros só preenchem páginas; sem diff repetido no shell |
+| AppShell | **Nav completa + rotas stub** desde já, com o visual **portado do protótipo Lovable** | PRs futuros só preenchem páginas; sem diff repetido no shell |
+| Ícones | **`lucide-react`** (tree-shakeable, só os 7 importados entram no bundle) | É o que o protótipo usa; sidebar só-texto perde a leitura por símbolo no uso diário de balcão |
 | Arquitetura | **Abordagem A**: estrutura por camada + fetch wrapper próprio (sem axios) | Menos deps; fluxo de auth compreendido de ponta a ponta. Estrutura por features fica para quando doer |
 | Linguagem | **TypeScript** | zod + RHF só pagam o custo com `z.infer`; exigência de mercado |
 
@@ -76,14 +77,20 @@ Paleta completa do `petdash-design-system.jsx`:
 | ouro-muted | `#A8884A` | | neutro-light | `#D6D3D1` |
 | sucesso | `#3D7A4A` | | erro | `#B83C3C` |
 
-Proporção 62/28/10 aplicada: sidebar marsala = superfície grande; conteúdo em creme/neutros; ouro só em acentos (badge VIP, item ativo do menu). Logo dourada sempre dentro de container marsala/escuro, nunca em fundo claro. Fontes: DM Serif Display (títulos), Inter (UI), JetBrains Mono (valores monetários).
+Proporção 62/28/10 aplicada como no protótipo (`src/styles.css` do Lovable): a **sidebar é `escuro` (`#1C1917`)**, não marsala. O marsala aparece em superfícies pequenas e de destaque (tile da logo, avatar, botões primários); creme e neutros seguram o conteúdo; ouro fica só em acentos (item ativo do menu, badge VIP). Logo dourada sempre dentro de container marsala/escuro, nunca em fundo claro. Fontes: DM Serif Display (títulos), Inter (UI), JetBrains Mono (valores monetários).
+
+Mapa dos tokens semânticos do protótipo para os nossos: `--sidebar` → `escuro` · `--sidebar-accent` (item ativo) → `escuro-suave` · `--sidebar-primary` (borda/texto do ativo) → `ouro` · `--primary` (tile da logo) → `marsala`.
 
 ## Rotas e AppShell
 
 - `/login` pública.
-- Layout protegido: `/` (Dashboard), `/clientes`, `/servicos`, `/atendimentos`, `/pacotes`, `/financeiro` + 404.
+- Layout protegido: `/` (Painel financeiro), `/clientes`, `/servicos`, `/atendimentos`, `/pacotes`, `/financeiro` + 404.
 - Stubs renderizam `<EmConstrucao />`; PRs 10–15 substituem o miolo sem tocar no shell.
-- Header exibe **Patricia** (corrige o "Ângelo Duarte" do protótipo Lovable). Protótipo é referência visual estática; estrutura não porta (é TanStack Start).
+- Header exibe **Patricia / Proprietária** (corrige o "Ângelo Duarte" do protótipo). Protótipo é referência **visual**; a estrutura não porta (ele é TanStack Start + shadcn, o repo é Vite + react-router).
+
+Sidebar portada do `app-shell.tsx` do Lovable: superfície escura de 260px, tile marsala com a logo, "PetDash" em ouro sobre subtítulo "Ângelo · Spa Animal", grupos `PRINCIPAL` / `GESTÃO` com micro-rótulos, ícones do `lucide-react`, item ativo em `escuro-suave` com texto ouro e borda direita ouro de 2px. Mais o botão **Sair**, que o protótipo não tem.
+
+O que o protótipo mostra e **não** entra, por estar fora do MVP (ver design doc do projeto): `Agenda` (fase 2), `Relatórios` e `Configurações` (não existem no plano), busca global, sino de notificações e o card "Fechar o mês". Em contrapartida, `Financeiro` (custos e retiradas) existe só no nosso.
 
 ## Testes e CI
 
@@ -93,6 +100,9 @@ Vitest + RTL + MSW (jsdom):
 - `Login`: sucesso grava tokens e navega; 401 mostra "usuário ou senha inválidos".
 - `ProtectedRoute`: sem refresh token → redireciona para `/login`.
 - `api.ts`: 401 dispara refresh e refaz a chamada; refresh falho limpa storage; **duas chamadas concorrentes com 401 geram exatamente um POST de refresh** (prova o single-flight).
+- `Sidebar`: lista só os 6 itens do MVP (nenhum dos 3 do protótipo que estão fora); o `end` no NavLink impede que `/` fique ativa nas outras rotas.
+
+A suíte fixa `VITE_API_URL` em `vite.config.ts` (`test.env`). Sem isso, o Vitest carrega o `.env` local do dev e os handlers do MSW deixam de casar — com `onUnhandledRequest: "error"`, a suíte inteira cai. O CI não pegaria, pois lá não existe `.env`.
 
 CI: job `frontend` paralelo ao `backend` em `ci.yml` — `npm ci`, `vitest run`, `npm run build` (o build pega erro de tipo que teste não pega).
 
