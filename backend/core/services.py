@@ -1,8 +1,14 @@
+from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, DecimalField, Q, Sum, Value
+from django.db.models.functions import Coalesce
 
 from core.models import Atendimento, Custo, PacoteContratado, Pet, Retirada, Tutor
+
+VIP_MIN_VISITAS = 3
+VIP_MIN_GASTO = Decimal("500")
+VIP_JANELA_DIAS = 365
 
 
 def faturamento_periodo(inicio, fim):
@@ -89,6 +95,38 @@ def pets_vip(inicio, fim):
         )
         .filter(Q(qtd_visitas__gte=3) | Q(total_gasto__gte=500))
         .distinct()
+    )
+
+
+def anota_vip(queryset, hoje):
+    """Anota qtd_visitas e total_gasto de cada pet na janela de 365 dias até `hoje`.
+
+    A agregação é condicional (`filter=` dentro do Count/Sum), e não um
+    `.filter()` sobre o queryset, de propósito: filtrar o join transformaria o
+    LEFT OUTER em INNER e pets sem atendimento sumiriam da lista de clientes.
+
+    Count e Sum percorrem uma única relação (`atendimentos`), então não se
+    multiplicam. Ao acrescentar uma segunda relação a esta annotate, aparece
+    produto cartesiano: separe em duas queries.
+
+    O booleano `vip` é derivado no PetSerializer a partir destes dois números,
+    e não anotado aqui, para que o dashboard (que serializa `pets_vip`, com
+    outra janela) continue coerente sem duplicar a regra.
+
+    `hoje` é parâmetro, não `date.today()`, para o teste ser determinístico.
+    """
+    na_janela = Q(
+        atendimentos__status=Atendimento.Status.LIBERADO,
+        atendimentos__data__gte=hoje - timedelta(days=VIP_JANELA_DIAS),
+        atendimentos__data__lte=hoje,
+    )
+    return queryset.annotate(
+        qtd_visitas=Count("atendimentos", filter=na_janela),
+        total_gasto=Coalesce(
+            Sum("atendimentos__valor", filter=na_janela),
+            Value(Decimal("0")),
+            output_field=DecimalField(max_digits=10, decimal_places=2),
+        ),
     )
 
 
