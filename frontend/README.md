@@ -1,32 +1,24 @@
-# React + TypeScript + Vite
+# Frontend (React + Vite + Tailwind v4)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+App React do PetDash. Consome a API DRF do `backend/` via JWT.
 
-Currently, two official plugins are available:
+## Rodar local
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+cp .env.example .env   # ajuste VITE_API_URL se a API não estiver em localhost:8000
+npm run dev            # http://localhost:5173 (backend precisa estar de pé)
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Scripts
+
+- `npm run dev` — servidor de desenvolvimento
+- `npm run build` — type-check (`tsc -b`) + build de produção
+- `npm run test` — suíte (Vitest + Testing Library + MSW)
+- `npm run test:watch` — testes em modo watch
+
+## Convenções
+
+- Tokens da marca em `src/styles/index.css` (bloco `@theme` do Tailwind v4).
+- HTTP sempre via `src/lib/api.ts` (injeta JWT e faz refresh em 401); nunca `fetch` direto nas páginas.
+- Protótipos do Lovable são só referência visual (sem Supabase, sem portar estrutura). Ver `CLAUDE.md` na raiz.
