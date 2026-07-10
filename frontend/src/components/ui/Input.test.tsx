@@ -18,4 +18,10 @@ describe("Input", () => {
     render(<Input label="Usuário" name="username" />);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("associa label e input mesmo sem id nem name", () => {
+    render(<Input label="Raça" />);
+
+    expect(screen.getByLabelText("Raça")).toBeInTheDocument();
+  });
 });

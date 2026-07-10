@@ -33,7 +33,8 @@ class PetViewSet(viewsets.ModelViewSet):
     filterset_fields = ["tutor", "porte"]
 
     def get_queryset(self):
-        return models.Pet.objects.filter(ativo=True).select_related("tutor").order_by("nome")
+        qs = models.Pet.objects.filter(ativo=True).select_related("tutor").order_by("nome")
+        return services.anota_vip(qs, date.today())
 
     def perform_destroy(self, instance):
         instance.ativo = False

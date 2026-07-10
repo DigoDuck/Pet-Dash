@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
 from core.models import Atendimento
-from tests.factories import PetFactory, ServicoFactory
+from tests.factories import AtendimentoFactory, PetFactory, ServicoFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -97,3 +97,14 @@ def test_editar_atendimento_que_ocupa_ultimo_credito_e_permitido(api):
     }
     resp = api.put(f"/api/atendimentos/{atendimento.id}/", payload, format="json")
     assert resp.status_code == 200, resp.content
+
+
+def test_historico_do_pet_traz_nome_do_servico(api):
+    servico = ServicoFactory(nome="Banho e Tosa")
+    pet = PetFactory()
+    AtendimentoFactory(pet=pet, servico=servico, status="Liberado")
+
+    resp = api.get(f"/api/atendimentos/?pet={pet.id}")
+
+    assert resp.json()["results"][0]["servico_nome"] == "Banho e Tosa"
+    assert resp.json()["results"][0]["pacote"] is None

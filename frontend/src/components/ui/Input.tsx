@@ -1,4 +1,4 @@
-import type { ComponentPropsWithRef } from "react";
+import { useId, type ComponentPropsWithRef } from "react";
 
 interface InputProps extends ComponentPropsWithRef<"input"> {
   label: string;
@@ -6,7 +6,10 @@ interface InputProps extends ComponentPropsWithRef<"input"> {
 }
 
 export function Input({ label, error, id, className = "", ...props }: InputProps) {
-  const inputId = id ?? props.name;
+  // O register() do react-hook-form sempre passa `name`, mas um campo via
+  // Controller pode não passar. Sem o useId, label e input ficam órfãos.
+  const gerado = useId();
+  const inputId = id ?? props.name ?? gerado;
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={inputId} className="text-sm font-medium text-escuro">

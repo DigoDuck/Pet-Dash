@@ -2,8 +2,14 @@ import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { ApiError } from "./api";
 import { clearTokens } from "./auth";
 
+// N queries paralelas podem falhar com 401 no mesmo tick (o detalhe do tutor
+// busca tutor e pets juntos). Sem esta flag, cada uma dispararia seu próprio
+// redirect. Não é loop, mas empilha navegações.
+let redirecionando = false;
+
 function aoFalharComo401(error: unknown) {
-  if (error instanceof ApiError && error.status === 401) {
+  if (error instanceof ApiError && error.status === 401 && !redirecionando) {
+    redirecionando = true;
     clearTokens();
     window.location.assign("/login");
   }
