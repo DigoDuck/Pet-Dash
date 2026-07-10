@@ -214,3 +214,17 @@ def test_dashboard_endpoint_sem_params_retorna_400(api):
 def test_dashboard_endpoint_data_invalida_retorna_400(api):
     resp = api.get("/api/dashboard/?inicio=banana&fim=2026-06-30")
     assert resp.status_code == 400
+
+
+def test_dashboard_marca_pets_vip_como_vip(api):
+    """pets_vip anota os mesmos dois campos, então o booleano derivado bate."""
+    pet = PetFactory()
+    for dia in (5, 12, 19):
+        AtendimentoFactory(
+            pet=pet, status="Liberado",
+            valor=Decimal("50.00"), data=date(2026, 6, dia),
+        )
+
+    resp = api.get("/api/dashboard/?inicio=2026-06-01&fim=2026-06-30")
+
+    assert resp.json()["vip"][0]["vip"] is True

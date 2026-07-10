@@ -1,6 +1,8 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
-from . import models
+from . import models, services
 
 
 class TutorSerializer(serializers.ModelSerializer):
@@ -12,13 +14,35 @@ class TutorSerializer(serializers.ModelSerializer):
 
 class PetSerializer(serializers.ModelSerializer):
     tutor_nome = serializers.CharField(source="tutor.nome", read_only=True)
+    # SerializerMethodField (e não BooleanField/IntegerField) porque o objeto
+    # devolvido pelo POST não passa pelo get_queryset() anotado do ViewSet.
+    vip = serializers.SerializerMethodField()
+    qtd_visitas = serializers.SerializerMethodField()
+    total_gasto = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Pet
         fields = [
-            "id", "tutor", "tutor_nome", "nome", "raca", "porte", "ativo", "created_at",
+            "id", "tutor", "tutor_nome", "nome", "raca", "porte", "ativo",
+            "created_at", "vip", "qtd_visitas", "total_gasto",
         ]
         read_only_fields = ["ativo", "created_at"]
+
+    def get_qtd_visitas(self, obj) -> int:
+        return getattr(obj, "qtd_visitas", 0)
+
+    def get_total_gasto(self, obj) -> str:
+        total = getattr(obj, "total_gasto", None) or Decimal("0")
+        return str(total.quantize(Decimal("0.01")))
+
+    def get_vip(self, obj) -> bool:
+        # Derivado, nunca armazenado (invariante 6). Vale tanto para o queryset
+        # anotado pelo PetViewSet (janela de 365 dias) quanto para o do
+        # dashboard (pets_vip, janela do período consultado).
+        return (
+            self.get_qtd_visitas(obj) >= services.VIP_MIN_VISITAS
+            or Decimal(self.get_total_gasto(obj)) >= services.VIP_MIN_GASTO
+        )
 
 
 class ServicoSerializer(serializers.ModelSerializer):
