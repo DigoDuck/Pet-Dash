@@ -7,7 +7,9 @@ import { Financeiro } from "../pages/Financeiro";
 import { Login } from "../pages/Login";
 import { NotFound } from "../pages/NotFound";
 import { Pacotes } from "../pages/Pacotes";
+import { PetDetalhe } from "../pages/PetDetalhe";
 import { Servicos } from "../pages/Servicos";
+import { TutorDetalhe } from "../pages/TutorDetalhe";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -20,6 +22,8 @@ export const router = createBrowserRouter([
         children: [
           { path: "/", element: <Dashboard /> },
           { path: "/clientes", element: <Clientes /> },
+          { path: "/clientes/:id", element: <TutorDetalhe /> },
+          { path: "/pets/:id", element: <PetDetalhe /> },
           { path: "/servicos", element: <Servicos /> },
           { path: "/atendimentos", element: <Atendimentos /> },
           { path: "/pacotes", element: <Pacotes /> },
