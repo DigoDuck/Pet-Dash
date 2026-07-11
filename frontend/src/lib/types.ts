@@ -62,3 +62,17 @@ export const PORTES: { valor: Porte; rotulo: string }[] = [
 ];
 
 export const TAMANHO_PAGINA = 50;
+
+export interface Servico {
+  id: number;
+  nome: string;
+  preco_padrao: string;
+  is_pacote: boolean;
+  creditos: number | null;
+  ativo: boolean;
+}
+
+export type ServicoEntrada = Pick<
+  Servico,
+  "nome" | "preco_padrao" | "is_pacote" | "creditos"
+>;
