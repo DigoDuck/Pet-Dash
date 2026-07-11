@@ -652,10 +652,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useForm } from "react-hook-form";
 import { describe, expect, it } from "vitest";
+import type { AtendimentoEntrada } from "../../lib/types";
 import { PagamentosField } from "./PagamentosField";
 
 function Host({ valor }: { valor: string }) {
-  const { control, register, watch } = useForm({
+  // Tipar o form: o control precisa ser Control<AtendimentoEntrada> para casar
+  // com o PagamentosField (senão o tsc -b quebra o build — os testes entram no include).
+  const { control, register, watch } = useForm<AtendimentoEntrada>({
     defaultValues: { pagamentos: [{ metodo: "Pix", valor: "" }] },
   });
   return (
@@ -900,9 +903,11 @@ describe("AtendimentoForm", () => {
 
     renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
 
-    await userEvent.selectOptions(await screen.findByLabelText("Serviço"), "1");
+    // Esperar a option carregar via MSW antes de selecionar (senão "value not found").
+    await screen.findByRole("option", { name: "Banho" });
+    await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
 
-    expect(screen.getByLabelText("Valor")).toHaveValue("60.00");
+    await waitFor(() => expect(screen.getByLabelText("Valor")).toHaveValue("60.00"));
   });
 
   it("pet com pacote vincula e esconde os pagamentos", async () => {
@@ -1007,9 +1012,17 @@ export function AtendimentoForm() {
   const editando = id != null;
   const navigate = useNavigate();
 
+  const [textoPet, setTextoPet] = useState("");
   const [termoPet, setTermoPet] = useState("");
   const [petSelecionado, setPetSelecionado] = useState<{ id: number; rotulo: string } | null>(null);
   const [cobrarAvulso, setCobrarAvulso] = useState(false);
+
+  // Debounce da busca de pet (300ms), como em Clientes/Servicos: sem isto cada
+  // tecla dispara um GET /pets/?search=.
+  useEffect(() => {
+    const t = setTimeout(() => setTermoPet(textoPet), 300);
+    return () => clearTimeout(t);
+  }, [textoPet]);
 
   const buscaPets = useBuscaPets(termoPet);
   const pacoteAtivo = usePacoteAtivo(petSelecionado?.id ?? null);
@@ -1084,7 +1097,7 @@ export function AtendimentoForm() {
               valor={petSelecionado}
               carregando={buscaPets.isFetching}
               placeholder="Buscar por nome do pet ou tutor"
-              aoDigitarBusca={setTermoPet}
+              aoDigitarBusca={setTextoPet}
               aoSelecionar={escolherPet}
               error={formState.errors.pet?.message}
             />
@@ -1607,7 +1620,10 @@ gh pr create --base main --title "PR 12: Atendimentos" --body "Implementa docs/s
 
 **Consistência de nomes.** `Pacote`, `AtendimentoEntrada`, `PagamentoEntrada`, `usePacoteAtivo`, `useBuscaPets`, `useAtendimentos`, `useCriarAtendimento`, `useAtualizarAtendimento`, `Combobox`/`ItemCombobox`, `PagamentosField`, `PacoteAtivoBanner`, `AtendimentoForm`, `AtendimentoTabela`, `StatusAcao`, `FiltrosAtendimento`, `cobrarAvulso`, `petSelecionado`, `usaPacote` — grafia consistente entre tasks.
 
-**Pontos de atenção para a execução (e para a auditoria):**
-- O `useEffect` que sugere o valor ao trocar de serviço tem deps `[servicoAtual]` só, com `eslint-disable`. Se o `oxlint` do projeto reclamar de `react-hooks/exhaustive-deps`, verificar se essa regra está ativa (o projeto usa `oxlint`, não `eslint-plugin-react-hooks`; provavelmente não reclama). Sobrescrever o valor ao trocar de serviço é intencional.
-- No `AtendimentoForm`, o campo `pet` é registrado via `Controller` mas o valor real vem de `petSelecionado` (estado), não do form. O `register("pet")`/`setValue("pet")` mantém o form ciente para a validação; a fonte de verdade da seleção é `petSelecionado`. A auditoria deve checar se o payload envia o `pet` certo (o `enviar` usa `petSelecionado?.id`).
-- O `watch("valor")` alimenta tanto o `PagamentosField` quanto o `value` do Input de valor. Confirmar que `value={valorAtual}` + `{...register("valor")}` no mesmo input não conflita (o register já controla o value; passar `value` explícito pode gerar warning de input controlado/não-controlado). **A auditoria deve olhar isto:** talvez remover o `value={valorAtual}` e deixar só o `register`, lendo o valor pré-preenchido via `setValue`.
+**Auditoria (Opus, 2026-07-11).** O subagente Fable 5 caiu por limite de conta antes de rodar; a auditoria foi feita inline, verificando contra o código real. Achados corrigidos:
+
+1. **BLOQUEADOR** — O `Host` do teste do `PagamentosField` (Task 4) criava `useForm({...})` sem genérico; o `control` inferido não casava com `Control<AtendimentoEntrada>` do componente. Como o `tsconfig.app.json` tem `include: ["src"]`, os testes entram no `tsc -b` e o `npm run build` quebraria. Corrigido para `useForm<AtendimentoEntrada>`.
+2. **IMPORTANTE** — Faltava o debounce de 300ms da busca de pet (a spec pede). O form ligava `aoDigitarBusca={setTermoPet}` direto, um request por tecla. Corrigido com `textoPet` + `useEffect` de debounce → `setTermoPet`.
+3. **IMPORTANTE** — O teste "escolher serviço pré-preenche valor" fazia `selectOptions` antes das options carregarem via MSW. Corrigido: aguarda `findByRole("option", {name:"Banho"})` e envolve o assert do valor em `waitFor` (o `setValue` do effect é assíncrono).
+
+Pontos verificados e **sem** defeito: o `Controller` do pet valida via `petSelecionado` e o payload usa `petSelecionado?.id` (envia o pet certo); o teste de teclado do combobox bate com a implementação (destaque 0→1, clamp); `django_assert_max_num_queries(6)` é plausível (auth+count+select+prefetch ≈ 4); o `select_related("pet__tutor")` cobre `tutor_nome`; `request<T>` devolve `null` no 204; `Select`/`Input`/`Checkbox` espalham `...props` e aceitam `value`/`onChange`; nenhuma invariante de faturamento violada.
