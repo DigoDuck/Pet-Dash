@@ -5,8 +5,8 @@ import { HistoricoTabela } from "./HistoricoTabela";
 
 function atendimento(over: Partial<Atendimento>): Atendimento {
   return {
-    id: 1, pet: 7, servico: 1, servico_nome: "Banho", pacote: null,
-    data: "2026-07-01", horario: "10:00:00", valor: "95.00",
+    id: 1, pet: 7, servico: 1, servico_nome: "Banho", pet_nome: "Luna", tutor_nome: "Ana Clara",
+    pacote: null, data: "2026-07-01", horario: "10:00:00", valor: "95.00",
     transporte: false, transporte_valor: "0.00", status: "Liberado", pagamentos: [],
     ...over,
   };

@@ -121,12 +121,15 @@ class DashboardSerializer(serializers.Serializer):
 class AtendimentoSerializer(serializers.ModelSerializer):
     pagamentos = PagamentoSerializer(many=True, required=False)
     servico_nome = serializers.CharField(source="servico.nome", read_only=True)
+    pet_nome = serializers.CharField(source="pet.nome", read_only=True)
+    tutor_nome = serializers.CharField(source="pet.tutor.nome", read_only=True)
 
     class Meta:
         model = models.Atendimento
         fields = [
-            "id", "pet", "servico", "servico_nome", "pacote", "data", "horario",
-            "valor", "transporte", "transporte_valor", "status", "pagamentos",
+            "id", "pet", "pet_nome", "tutor_nome", "servico", "servico_nome",
+            "pacote", "data", "horario", "valor", "transporte", "transporte_valor",
+            "status", "pagamentos",
         ]
 
     def create(self, validated_data):

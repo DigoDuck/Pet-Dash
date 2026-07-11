@@ -43,6 +43,8 @@ export interface Atendimento {
   pet: number;
   servico: number;
   servico_nome: string;
+  pet_nome: string;
+  tutor_nome: string;
   /** Não-nulo significa consumo de crédito de pacote (invariante 2). */
   pacote: number | null;
   data: string;
@@ -76,3 +78,33 @@ export type ServicoEntrada = Pick<
   Servico,
   "nome" | "preco_padrao" | "is_pacote" | "creditos"
 >;
+
+export interface Pacote {
+  id: number;
+  pet: number;
+  servico: number;
+  competencia: string;
+  qtd_total: number;
+  valor_pago: string;
+  data_compra: string;
+  validade: string;
+  saldo: number;
+}
+
+export interface PagamentoEntrada {
+  metodo: "Pix" | "Cartao" | "Dinheiro";
+  valor: string;
+}
+
+export interface AtendimentoEntrada {
+  pet: number;
+  servico: number;
+  pacote: number | null;
+  data: string;
+  horario: string;
+  valor: string;
+  transporte: boolean;
+  transporte_valor: string;
+  status: StatusAtendimento;
+  pagamentos: PagamentoEntrada[];
+}

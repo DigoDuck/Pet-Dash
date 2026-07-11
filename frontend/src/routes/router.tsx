@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
+import { AtendimentoForm } from "../pages/AtendimentoForm";
 import { Atendimentos } from "../pages/Atendimentos";
 import { Clientes } from "../pages/Clientes";
 import { Dashboard } from "../pages/Dashboard";
@@ -26,6 +27,8 @@ export const router = createBrowserRouter([
           { path: "/pets/:id", element: <PetDetalhe /> },
           { path: "/servicos", element: <Servicos /> },
           { path: "/atendimentos", element: <Atendimentos /> },
+          { path: "/atendimentos/novo", element: <AtendimentoForm /> },
+          { path: "/atendimentos/:id/editar", element: <AtendimentoForm /> },
           { path: "/pacotes", element: <Pacotes /> },
           { path: "/financeiro", element: <Financeiro /> },
           { path: "*", element: <NotFound /> },

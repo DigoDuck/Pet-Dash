@@ -108,7 +108,7 @@ class AtendimentoViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return (
-            models.Atendimento.objects.select_related("pet", "servico", "pacote")
+            models.Atendimento.objects.select_related("pet__tutor", "servico", "pacote")
             .prefetch_related("pagamentos")
             .order_by("-data", "-horario")
         )

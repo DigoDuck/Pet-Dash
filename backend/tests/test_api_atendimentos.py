@@ -108,3 +108,26 @@ def test_historico_do_pet_traz_nome_do_servico(api):
 
     assert resp.json()["results"][0]["servico_nome"] == "Banho e Tosa"
     assert resp.json()["results"][0]["pacote"] is None
+
+
+def test_lista_atendimentos_traz_pet_e_tutor(api):
+    from tests.factories import TutorFactory
+
+    tutor = TutorFactory(nome="Rafael Lima")
+    pet = PetFactory(nome="Mel", tutor=tutor)
+    AtendimentoFactory(pet=pet, status="Liberado")
+
+    dados = api.get("/api/atendimentos/").json()["results"][0]
+
+    assert dados["pet_nome"] == "Mel"
+    assert dados["tutor_nome"] == "Rafael Lima"
+
+
+def test_lista_atendimentos_sem_n_mais_1(api, django_assert_max_num_queries):
+    for _ in range(5):
+        AtendimentoFactory(status="Liberado")
+
+    # auth + count + select (com select_related, o join traz pet/tutor/servico/pacote
+    # numa query só). Sem o select_related do tutor, seriam ~5 queries extras.
+    with django_assert_max_num_queries(6):
+        api.get("/api/atendimentos/")

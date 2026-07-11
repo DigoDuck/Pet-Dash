@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { request } from "../lib/api";
 import type { Paginated, Pet, Porte } from "../lib/types";
 
@@ -52,5 +52,14 @@ export function useDesativarPet() {
   return useMutation({
     mutationFn: (id: number) => request<null>(`/pets/${id}/`, { method: "DELETE" }),
     onSuccess: () => client.invalidateQueries({ queryKey: chavesPets.raiz }),
+  });
+}
+
+export function useBuscaPets(termo: string) {
+  return useQuery({
+    queryKey: ["pets", "busca", termo],
+    queryFn: () => request<Paginated<Pet>>(`/pets/?search=${encodeURIComponent(termo)}`),
+    enabled: termo.length > 0,
+    placeholderData: keepPreviousData,
   });
 }
