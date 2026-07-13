@@ -7,6 +7,7 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { Paginacao } from "../components/ui/Paginacao";
+import { SeletorMes } from "../components/ui/SeletorMes";
 import { useAtualizarPacote, useCriarPacote, usePacotes } from "../hooks/usePacotes";
 import { mensagemDeErro } from "../lib/api";
 import { formatarData, inicioDaCompetencia, mesCorrente } from "../lib/competencia";
@@ -51,12 +52,10 @@ export function Pacotes() {
       <div className="mt-6 flex flex-wrap items-end gap-4">
         {/* Rótulo "Mês", não "Competência": o campo do modal já usa esse nome, e
             dois rótulos iguais na tela deixariam o leitor de tela ambíguo. */}
-        <Input
-          label="Mês"
-          type="month"
-          value={mes}
-          onChange={(e) => {
-            setMes(e.target.value);
+        <SeletorMes
+          valor={mes}
+          aoMudar={(m) => {
+            setMes(m);
             setPagina(1);
           }}
         />

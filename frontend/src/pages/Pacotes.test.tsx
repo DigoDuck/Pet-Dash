@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -83,6 +83,27 @@ describe("Pacotes", () => {
     expect(await screen.findByText("Luna")).toBeInTheDocument();
     expect(screen.getByText("3/4 créditos")).toBeInTheDocument();
     expect(url).toContain("competencia=2026-07-01");
+  });
+
+  // Limpar o campo mandava "" ao inicioDaCompetencia, que virava "-01" — string
+  // truthy que ia para a query e voltava como 400 do DRF, derrubando a lista.
+  it("limpar o campo de mês não dispara uma competência inválida", async () => {
+    const urls: string[] = [];
+    server.use(
+      http.get(`${BASE}/pacotes/`, ({ request }) => {
+        urls.push(request.url);
+        return HttpResponse.json(paginado([pacote()]));
+      }),
+    );
+
+    renderizar();
+    await screen.findByText("Luna");
+
+    fireEvent.change(screen.getByLabelText("Mês"), { target: { value: "" } });
+
+    expect(urls.every((u) => u.includes("competencia=2026-07-01"))).toBe(true);
+    expect(screen.getByLabelText("Mês")).toHaveValue("2026-07");
+    expect(screen.getByText("Luna")).toBeInTheDocument();
   });
 
   it("mostra estado vazio quando o mês não tem pacote", async () => {
