@@ -1,4 +1,5 @@
 import { useFieldArray, type Control, type UseFormRegister, type UseFormWatch } from "react-hook-form";
+import { formatarPreco } from "../../lib/formato";
 import type { AtendimentoEntrada } from "../../lib/types";
 import { Button } from "../ui/Button";
 
@@ -10,10 +11,6 @@ interface PagamentosFieldProps {
 }
 
 const METODOS = ["Pix", "Cartao", "Dinheiro"] as const;
-
-function formatarReais(n: number): string {
-  return `R$ ${n.toFixed(2).replace(".", ",")}`;
-}
 
 export function PagamentosField({ control, register, watch, valorAtendimento }: PagamentosFieldProps) {
   const { fields, append, remove } = useFieldArray({ control, name: "pagamentos" });
@@ -76,9 +73,9 @@ export function PagamentosField({ control, register, watch, valorAtendimento }: 
         {diferenca === 0 ? (
           <span className="text-sucesso">Soma confere</span>
         ) : diferenca > 0 ? (
-          <span className="text-erro">Falta {formatarReais(diferenca)}</span>
+          <span className="text-erro">Falta {formatarPreco(diferenca)}</span>
         ) : (
-          <span className="text-erro">Sobra {formatarReais(-diferenca)}</span>
+          <span className="text-erro">Sobra {formatarPreco(-diferenca)}</span>
         )}
       </div>
     </div>

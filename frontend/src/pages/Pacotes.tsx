@@ -10,11 +10,8 @@ import { Paginacao } from "../components/ui/Paginacao";
 import { useAtualizarPacote, useCriarPacote, usePacotes } from "../hooks/usePacotes";
 import { mensagemDeErro } from "../lib/api";
 import { formatarData, inicioDaCompetencia, mesCorrente } from "../lib/competencia";
+import { formatarPreco } from "../lib/formato";
 import type { Pacote } from "../lib/types";
-
-function formatarPreco(valor: string): string {
-  return `R$ ${Number(valor).toFixed(2).replace(".", ",")}`;
-}
 
 export function Pacotes() {
   const [mes, setMes] = useState(mesCorrente());
