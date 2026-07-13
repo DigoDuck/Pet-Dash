@@ -79,13 +79,18 @@ class PacoteContratadoViewSet(viewsets.ModelViewSet):
 class CustoViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.CustoSerializer
     filterset_fields = ["tipo", "competencia"]
-    queryset = models.Custo.objects.all().order_by("-competencia")
+    # Desempate por descrição: ordenar só pelo mês deixa as linhas do mesmo mês
+    # em ordem indefinida, e a paginação passa a repetir ou pular lançamentos.
+    queryset = models.Custo.objects.all().order_by("-competencia", "descricao")
 
 
 class RetiradaViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.RetiradaSerializer
-    filterset_fields = ["data"]
-    queryset = models.Retirada.objects.all().order_by("-data")
+    # Retirada tem data real, não competência: a tela do mês filtra por intervalo.
+    # "exact" continua declarado — um filtro não declarado é ignorado em silêncio
+    # pelo django-filter, e ?data=<dia> passaria a devolver todas as retiradas.
+    filterset_fields = {"data": ["exact", "gte", "lte"]}
+    queryset = models.Retirada.objects.all().order_by("-data", "descricao")
 
 
 class DashboardView(APIView):
