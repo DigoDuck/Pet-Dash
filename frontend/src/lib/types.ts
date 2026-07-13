@@ -82,13 +82,28 @@ export type ServicoEntrada = Pick<
 export interface Pacote {
   id: number;
   pet: number;
+  pet_nome: string;
+  tutor_nome: string;
   servico: number;
+  servico_nome: string;
   competencia: string;
   qtd_total: number;
   valor_pago: string;
   data_compra: string;
   validade: string;
+  /** Derivado no backend (invariante 4): qtd_total - atendimentos não cancelados. */
   saldo: number;
+}
+
+export interface PacoteEntrada {
+  pet: number;
+  servico: number;
+  /** Sempre o dia 1 do mês ("2026-07-01"); o backend normaliza de qualquer forma. */
+  competencia: string;
+  qtd_total: number;
+  valor_pago: string;
+  data_compra: string;
+  validade: string;
 }
 
 export interface PagamentoEntrada {

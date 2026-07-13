@@ -29,6 +29,15 @@ export function useCriarServico() {
   });
 }
 
+// Só os serviços que são pacote, para o Select da venda. A chave começa com
+// "servicos", então as mutations de serviço já invalidam esta query também.
+export function useServicosPacote() {
+  return useQuery({
+    queryKey: ["servicos", "pacotes"] as const,
+    queryFn: () => request<Paginated<Servico>>("/servicos/?is_pacote=true&ativo=true"),
+  });
+}
+
 // PATCH parcial cobre os três casos: editar (objeto do form), desativar
 // ({ativo:false}) e reativar ({ativo:true}).
 export function useAtualizarServico(id: number) {
