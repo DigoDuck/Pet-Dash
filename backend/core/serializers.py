@@ -74,6 +74,17 @@ class PacoteContratadoSerializer(serializers.ModelSerializer):
         return obj.saldo()
 
     def validate(self, attrs):
+        # Só valida o serviço quando ele vem no payload. No PATCH parcial (editar
+        # a validade por um reagendamento), o serviço herdado do instance pode ter
+        # virado avulso no catálogo DEPOIS da venda; revalidá-lo travaria a edição
+        # de um pacote legítimo. O POST sempre manda o campo, então o caminho de
+        # criação continua coberto.
+        servico = attrs.get("servico")
+        if servico is not None and not servico.is_pacote:
+            raise serializers.ValidationError(
+                {"servico": ["Este serviço não é um pacote. Marque 'é pacote?' no catálogo."]}
+            )
+
         pet = attrs.get("pet", getattr(self.instance, "pet", None))
         competencia = attrs.get("competencia", getattr(self.instance, "competencia", None))
         if pet and competencia:
