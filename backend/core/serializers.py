@@ -121,6 +121,20 @@ class TopTutorSerializer(serializers.ModelSerializer):
         fields = ["id", "nome", "gasto_total"]
 
 
+class CategoriaCustoSerializer(serializers.Serializer):
+    categoria = serializers.CharField()
+    valor = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class PontoSerieSerializer(serializers.Serializer):
+    """Um mês do gráfico. `competencia` é sempre o dia 1."""
+
+    competencia = serializers.DateField()
+    faturamento = serializers.DecimalField(max_digits=10, decimal_places=2)
+    custos = serializers.DecimalField(max_digits=10, decimal_places=2)
+    lucro = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
 class DashboardSerializer(serializers.Serializer):
     # Todos os valores monetários saem como string ("315.00"), padrão DRF,
     # para o front não receber float e string misturados na mesma resposta.

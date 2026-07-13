@@ -1,14 +1,15 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Count, DecimalField, Q, Sum, Value
-from django.db.models.functions import Coalesce
+from django.db.models import Count, DecimalField, Min, Q, Sum, Value
+from django.db.models.functions import Coalesce, Lower, Trim
 
 from core.models import Atendimento, Custo, PacoteContratado, Pet, Retirada, Tutor
 
 VIP_MIN_VISITAS = 3
 VIP_MIN_GASTO = Decimal("500")
 VIP_JANELA_DIAS = 365
+CATEGORIAS_NO_GRAFICO = 5
 
 
 def faturamento_periodo(inicio, fim):
@@ -75,6 +76,90 @@ def dashboard_periodo(inicio, fim):
         "margem": margem,
     }
     
+
+def _primeiro_dia_do_proximo_mes(competencia):
+    """Dezembro é o caso que quebra a versão ingênua (mes + 1 estoura em 13)."""
+    if competencia.month == 12:
+        return date(competencia.year + 1, 1, 1)
+    return date(competencia.year, competencia.month + 1, 1)
+
+
+def serie_mensal(inicio, fim):
+    """Faturamento, custos e lucro de cada mês do intervalo, em ordem cronológica.
+
+    Reusa `faturamento_periodo` mês a mês em vez de fazer um TruncMonth com um
+    GROUP BY só. São 3 queries por mês (18 num gráfico de 6) contra 3 no total —
+    mas o GROUP BY reescreveria a regra da invariante 1 (`pacote_id IS NULL` +
+    status Liberado + pacotes por `data_compra`) num segundo lugar. Com regra
+    duplicada, uma mudança futura em só um dos lados faz o gráfico e o KPI da
+    mesma tela discordarem em silêncio. Com usuária única e ~130 atendimentos/mês,
+    18 queries indexadas não são um problema; duas cópias da regra são.
+    `test_serie_bate_com_dashboard_periodo_no_mesmo_mes` guarda essa decisão.
+
+    Itera sobre os meses do intervalo, e não sobre as linhas do banco: mês sem
+    movimento precisa aparecer como linha de zeros. Se ele sumisse, o gráfico
+    colaria abril em junho e a leitura de tendência mentiria.
+
+    Cada ponto cobre o mês inteiro, mesmo que o intervalo pedido comece ou termine
+    no meio dele — uma barra é sempre um mês fechado.
+    """
+    pontos = []
+    competencia = inicio.replace(day=1)
+    ultima = fim.replace(day=1)
+
+    while competencia <= ultima:
+        fim_do_mes = _primeiro_dia_do_proximo_mes(competencia) - timedelta(days=1)
+
+        faturamento = faturamento_periodo(competencia, fim_do_mes)
+        custos = Custo.objects.filter(competencia=competencia).aggregate(
+            total=Sum("valor")
+        )["total"] or Decimal("0")
+
+        pontos.append({
+            "competencia": competencia,
+            "faturamento": faturamento,
+            "custos": custos,
+            "lucro": faturamento - custos,
+        })
+        competencia = _primeiro_dia_do_proximo_mes(competencia)
+
+    return pontos
+
+
+def custos_por_categoria(inicio, fim, limite=CATEGORIAS_NO_GRAFICO):
+    """Custos do período agrupados por categoria, maiores primeiro, cauda em "Outros".
+
+    `Custo.categoria` é texto livre (CharField, sem choices, aceita vazio), então o
+    GROUP BY é feito numa chave normalizada: sem ela, "Aluguel", "aluguel" e
+    "Aluguel " virariam três fatias do mesmo aluguel e o gráfico mentiria. O rótulo
+    exibido continua sendo o texto como foi digitado — só a chave de agrupamento é
+    normalizada. Custo sem categoria vira "Sem categoria" em vez de uma fatia anônima.
+
+    Isso não conserta o problema na origem (a categoria continua sem catálogo);
+    apenas impede que a digitação suja apareça como custo duplicado.
+    """
+    grupos = (
+        Custo.objects.filter(competencia__range=(inicio, fim))
+        .annotate(chave=Lower(Trim("categoria")))
+        .values("chave")
+        .annotate(total=Sum("valor"), rotulo=Min("categoria"))
+        .order_by("-total")
+    )
+
+    linhas = [
+        {
+            "categoria": (grupo["rotulo"] or "").strip() or "Sem categoria",
+            "valor": grupo["total"],
+        }
+        for grupo in grupos
+    ]
+
+    if len(linhas) <= limite:
+        return linhas
+
+    cauda = sum((linha["valor"] for linha in linhas[limite:]), Decimal("0"))
+    return [*linhas[:limite], {"categoria": "Outros", "valor": cauda}]
+
 
 def pets_vip(inicio, fim):
     """Pets VIP no período: 3+ visitas Liberadas OU R$500+ gastos.

@@ -2,6 +2,7 @@ from datetime import date
 
 from rest_framework import viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.exceptions import ParseError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,6 +14,19 @@ from . import models, serializers, services
 @permission_classes([AllowAny])
 def healthcheck(request):
     return Response({"status": "ok"})
+
+
+def periodo_dos_params(request):
+    """Lê ?inicio=&fim= no formato ISO. ParseError vira 400 com {"detail": ...}."""
+    try:
+        return (
+            date.fromisoformat(request.query_params["inicio"]),
+            date.fromisoformat(request.query_params["fim"]),
+        )
+    except KeyError as erro:
+        raise ParseError("Parâmetros obrigatórios: inicio e fim (YYYY-MM-DD).") from erro
+    except ValueError as erro:
+        raise ParseError("Data inválida; use o formato YYYY-MM-DD.") from erro
 
 
 class TutorViewSet(viewsets.ModelViewSet):
@@ -95,23 +109,29 @@ class RetiradaViewSet(viewsets.ModelViewSet):
 
 class DashboardView(APIView):
     def get(self, request):
-        try:
-            inicio = date.fromisoformat(request.query_params["inicio"])
-            fim = date.fromisoformat(request.query_params["fim"])
-        except KeyError:
-            return Response(
-                {"detail": "Parâmetros obrigatórios: inicio e fim (YYYY-MM-DD)."}, status=400
-            )
-        except ValueError:
-            return Response(
-                {"detail": "Data inválida; use o formato YYYY-MM-DD."}, status=400
-            )
+        inicio, fim = periodo_dos_params(request)
 
         kpis = serializers.DashboardSerializer(services.dashboard_periodo(inicio, fim)).data
         vip = serializers.PetSerializer(services.pets_vip(inicio, fim), many=True).data
         top = serializers.TopTutorSerializer(services.top_tutores(inicio, fim), many=True).data
+        categorias = serializers.CategoriaCustoSerializer(
+            services.custos_por_categoria(inicio, fim), many=True
+        ).data
 
-        return Response({**kpis, "vip": vip, "top_tutores": top})
+        return Response(
+            {**kpis, "vip": vip, "top_tutores": top, "custos_por_categoria": categorias}
+        )
+
+
+class SerieMensalView(APIView):
+    """Rota própria, e não mais um campo do /dashboard/, porque a série custa 3
+    queries por mês. Embutida no /dashboard/, a página Financeiro — que só quer dois
+    totais — passaria a pagar o gráfico inteiro a cada troca de mês."""
+
+    def get(self, request):
+        inicio, fim = periodo_dos_params(request)
+        serie = services.serie_mensal(inicio, fim)
+        return Response(serializers.PontoSerieSerializer(serie, many=True).data)
 
 
 class AtendimentoViewSet(viewsets.ModelViewSet):
