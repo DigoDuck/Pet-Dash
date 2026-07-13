@@ -1,3 +1,5 @@
+import { formatarData } from "../../lib/competencia";
+import { formatarPreco } from "../../lib/formato";
 import type { Atendimento, StatusAtendimento } from "../../lib/types";
 import { Badge } from "../ui/Badge";
 
@@ -6,15 +8,6 @@ const VARIANTE_STATUS: Record<StatusAtendimento, "sucesso" | "pendente" | "erro"
   Pendente: "pendente",
   Cancelado: "erro",
 };
-
-function formatarData(iso: string): string {
-  const [ano, mes, dia] = iso.split("-");
-  return `${dia}/${mes}/${ano}`;
-}
-
-function formatarValor(valor: string): string {
-  return `R$ ${Number(valor).toFixed(2).replace(".", ",")}`;
-}
 
 export function HistoricoTabela({ atendimentos }: { atendimentos: Atendimento[] }) {
   return (
@@ -47,7 +40,7 @@ export function HistoricoTabela({ atendimentos }: { atendimentos: Atendimento[] 
                 <Badge variant={VARIANTE_STATUS[a.status]}>{a.status}</Badge>
               </td>
               <td className="px-6 py-4 text-right font-mono font-semibold text-escuro">
-                {formatarValor(a.valor)}
+                {formatarPreco(a.valor)}
               </td>
             </tr>
           ))}

@@ -50,3 +50,32 @@ def test_filtra_retirada_por_data(api):
     RetiradaFactory(data=date(2026, 6, 15))
     RetiradaFactory(data=date(2026, 6, 20))
     assert api.get("/api/retiradas/?data=2026-06-15").json()["count"] == 1
+
+
+def test_filtra_retirada_por_intervalo(api):
+    from datetime import date
+
+    RetiradaFactory(data=date(2026, 6, 1))
+    RetiradaFactory(data=date(2026, 6, 30))
+    RetiradaFactory(data=date(2026, 7, 1))  # fora do intervalo, prova o recorte
+
+    resp = api.get("/api/retiradas/?data__gte=2026-06-01&data__lte=2026-06-30")
+
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 2
+
+
+def test_lista_custos_do_mesmo_mes_em_ordem_estavel(api):
+    """Sem desempate, a ordem das linhas do mesmo mês é indefinida no Postgres e a
+    paginação pode repetir ou pular lançamentos. Descrições sem acento de
+    propósito: a posição de "Á" depende do collation do banco."""
+    from datetime import date
+
+    junho = date(2026, 6, 1)
+    CustoFactory(competencia=junho, descricao="Luz")
+    CustoFactory(competencia=junho, descricao="Aluguel")
+    CustoFactory(competencia=junho, descricao="Internet")
+
+    resp = api.get("/api/custos/?competencia=2026-06-01")
+
+    assert [c["descricao"] for c in resp.json()["results"]] == ["Aluguel", "Internet", "Luz"]

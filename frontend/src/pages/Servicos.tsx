@@ -9,11 +9,8 @@ import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { Paginacao } from "../components/ui/Paginacao";
 import { useAtualizarServico, useCriarServico, useServicos } from "../hooks/useServicos";
+import { formatarPreco } from "../lib/formato";
 import type { Servico } from "../lib/types";
-
-function formatarPreco(valor: string): string {
-  return `R$ ${Number(valor).toFixed(2).replace(".", ",")}`;
-}
 
 export function Servicos() {
   const [texto, setTexto] = useState("");
