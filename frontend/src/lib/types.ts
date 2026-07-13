@@ -131,6 +131,27 @@ export interface Retirada {
 
 export type RetiradaEntrada = Omit<Retirada, "id">;
 
+export interface TopTutor {
+  id: number;
+  nome: string;
+  gasto_total: string;
+}
+
+/** Uma fatia do gráfico de despesas. O backend já funde as variações de digitação
+ *  ("Aluguel" / "aluguel") e corta a cauda numa linha "Outros". */
+export interface CategoriaCusto {
+  categoria: string;
+  valor: string;
+}
+
+/** Um mês do gráfico. `competencia` é sempre o dia 1 ("2026-06-01"). */
+export interface PontoSerie {
+  competencia: string;
+  faturamento: string;
+  custos: string;
+  lucro: string;
+}
+
 /** Resposta do GET /dashboard/. Todo valor monetário vem como string (DecimalField
  *  do DRF); `margem` é fração 0–1. Os KPIs são derivados em query (invariante 9). */
 export interface ResumoFinanceiro {
@@ -140,6 +161,9 @@ export interface ResumoFinanceiro {
   lucro: string;
   ticket_medio: string;
   margem: string;
+  vip: Pet[];
+  top_tutores: TopTutor[];
+  custos_por_categoria: CategoriaCusto[];
 }
 
 export interface PagamentoEntrada {
