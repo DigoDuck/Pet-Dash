@@ -59,12 +59,15 @@ class PagamentoSerializer(serializers.ModelSerializer):
         
 class PacoteContratadoSerializer(serializers.ModelSerializer):
     saldo = serializers.SerializerMethodField()
+    pet_nome = serializers.CharField(source="pet.nome", read_only=True)
+    tutor_nome = serializers.CharField(source="pet.tutor.nome", read_only=True)
+    servico_nome = serializers.CharField(source="servico.nome", read_only=True)
 
     class Meta:
         model = models.PacoteContratado
         fields = [
-            "id", "pet", "servico", "competencia", "qtd_total", "valor_pago",
-            "data_compra", "validade", "saldo",
+            "id", "pet", "pet_nome", "tutor_nome", "servico", "servico_nome",
+            "competencia", "qtd_total", "valor_pago", "data_compra", "validade", "saldo",
         ]
 
     def get_saldo(self, obj):

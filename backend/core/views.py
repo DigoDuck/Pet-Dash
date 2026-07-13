@@ -65,7 +65,15 @@ class ServicoViewSet(viewsets.ModelViewSet):
 
 class PacoteContratadoViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.PacoteContratadoSerializer
-    queryset = models.PacoteContratado.objects.all().order_by("-competencia")
+    filterset_fields = ["pet", "competencia"]
+    search_fields = ["pet__nome", "pet__tutor__nome"]
+    # select_related: sem ele, os *_nome do serializer fazem uma query por linha.
+    # Desempate por pet__nome mantém a paginação estável dentro do mesmo mês.
+    queryset = (
+        models.PacoteContratado.objects
+        .select_related("pet", "pet__tutor", "servico")
+        .order_by("-competencia", "pet__nome")
+    )
 
 
 class CustoViewSet(viewsets.ModelViewSet):
