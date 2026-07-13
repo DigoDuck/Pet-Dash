@@ -94,3 +94,17 @@ export async function login(username: string, password: string): Promise<void> {
 export function logout(): void {
   clearTokens();
 }
+
+/** Extrai a mensagem legível de um erro do DRF ({"non_field_errors": ["..."]}
+ *  ou {"campo": ["..."]}). Sem isto, uma mutation rejeitada falharia calada. */
+export function mensagemDeErro(erro: unknown): string {
+  if (!(erro instanceof ApiError)) return "Erro inesperado. Tente de novo.";
+  const detail = erro.detail;
+  if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object") {
+    const primeiro = Object.values(detail as Record<string, unknown>)[0];
+    if (Array.isArray(primeiro) && typeof primeiro[0] === "string") return primeiro[0];
+    if (typeof primeiro === "string") return primeiro;
+  }
+  return "Não foi possível salvar. Tente de novo.";
+}
