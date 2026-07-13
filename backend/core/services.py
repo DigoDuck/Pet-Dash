@@ -10,6 +10,7 @@ VIP_MIN_VISITAS = 3
 VIP_MIN_GASTO = Decimal("500")
 VIP_JANELA_DIAS = 365
 CATEGORIAS_NO_GRAFICO = 5
+TRANSACOES_NO_FEED = 8
 
 
 def faturamento_periodo(inicio, fim):
@@ -39,26 +40,33 @@ def dashboard_periodo(inicio, fim):
       vendido = 1 evento e 1 avulso Liberado = 1 evento (coerente com o
       faturamento; consumo de pacote não conta). 2 casas decimais.
     - margem: lucro / faturamento, fração 0–1 com 4 casas decimais.
+    - qtd_atendimentos: VISITAS Liberadas no período, incluindo consumo de pacote.
+      É um número diferente de `qtd_eventos_receita` (o denominador do ticket) e
+      os dois precisam continuar diferentes: o 2º banho do pacote é uma visita
+      (invariante 2: conta em frequência e histórico) mas não é receita nova.
+      Unificar os dois dividiria o faturamento pelo número errado.
+    - pets_ativos: contagem do cadastro, não do período. Viaja aqui por caber no
+      mesmo payload da tela que a exibe.
     """
     faturamento = faturamento_periodo(inicio, fim)
-    
+
     custos = Custo.objects.filter(
-        competencia__range=(inicio, fim) 
+        competencia__range=(inicio, fim)
     ).aggregate(total=Sum("valor"))["total"] or Decimal("0")
-    
+
     retiradas = Retirada.objects.filter(
         data__gte=inicio, data__lte=fim
     ).aggregate(total=Sum("valor"))["total"] or Decimal("0")
-    
+
     lucro = faturamento - custos
-    
+
     qtd_avulsos = Atendimento.objects.avulsos().liberados().no_periodo(inicio, fim).count()
     qtd_pacotes = PacoteContratado.objects.filter(data_compra__range=(inicio, fim)).count()
-    qtd_atendimentos = qtd_avulsos + qtd_pacotes
+    qtd_eventos_receita = qtd_avulsos + qtd_pacotes
 
     ticket_medio = (
-        (faturamento / qtd_atendimentos).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        if qtd_atendimentos
+        (faturamento / qtd_eventos_receita).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if qtd_eventos_receita
         else Decimal("0")
     )
     margem = (
@@ -66,7 +74,7 @@ def dashboard_periodo(inicio, fim):
         if faturamento
         else Decimal("0")
     )
-    
+
     return {
         "faturamento": faturamento,
         "custos": custos,
@@ -74,6 +82,8 @@ def dashboard_periodo(inicio, fim):
         "lucro": lucro,
         "ticket_medio": ticket_medio,
         "margem": margem,
+        "qtd_atendimentos": Atendimento.objects.liberados().no_periodo(inicio, fim).count(),
+        "pets_ativos": Pet.objects.filter(ativo=True).count(),
     }
     
 
@@ -159,6 +169,66 @@ def custos_por_categoria(inicio, fim, limite=CATEGORIAS_NO_GRAFICO):
 
     cauda = sum((linha["valor"] for linha in linhas[limite:]), Decimal("0"))
     return [*linhas[:limite], {"categoria": "Outros", "valor": cauda}]
+
+
+def transacoes_recentes(inicio, fim, limite=TRANSACOES_NO_FEED):
+    """Feed de caixa do período, mais recente primeiro.
+
+    Consumo de pacote fica FORA. O 2º banho é um atendimento normal, mas o dinheiro
+    dele entrou na venda (invariante 1) — mostrá-lo como "+R$ 95,00" criaria receita
+    que não existe. Por isso o filtro reusa `avulsos().liberados()`, os mesmos
+    métodos de queryset do faturamento: a regra continua morando num lugar só.
+
+    Quatro querysets já fatiados no banco e ordenados em Python, em vez de um UNION.
+    O UNION exigiria homogeneizar quatro models heterogêneos com `Value()` anotado e
+    reescreveria o filtro da invariante 1 numa segunda sintaxe — tudo isso para
+    ordenar 32 linhas em memória.
+
+    Empate de data é resolvido pela ordem fixa da concatenação (receitas antes de
+    despesas no mesmo dia), porque o `sorted` do Python é estável.
+    """
+    atendimentos = [
+        {
+            "tipo": "atendimento",
+            "descricao": f"{a.servico.nome} · {a.pet.nome}",
+            "valor": a.valor,
+            "data": a.data,
+        }
+        for a in (
+            Atendimento.objects.avulsos().liberados().no_periodo(inicio, fim)
+            .select_related("servico", "pet")
+            .order_by("-data", "-id")[:limite]
+        )
+    ]
+    pacotes = [
+        {
+            "tipo": "pacote",
+            "descricao": f"{p.servico.nome} · {p.pet.nome}",
+            "valor": p.valor_pago,
+            "data": p.data_compra,
+        }
+        for p in (
+            PacoteContratado.objects.filter(data_compra__range=(inicio, fim))
+            .select_related("servico", "pet")
+            .order_by("-data_compra", "-id")[:limite]
+        )
+    ]
+    custos = [
+        {"tipo": "custo", "descricao": c.descricao, "valor": c.valor, "data": c.competencia}
+        for c in (
+            Custo.objects.filter(competencia__range=(inicio, fim))
+            .order_by("-competencia", "-id")[:limite]
+        )
+    ]
+    retiradas = [
+        {"tipo": "retirada", "descricao": r.descricao, "valor": r.valor, "data": r.data}
+        for r in (
+            Retirada.objects.filter(data__range=(inicio, fim)).order_by("-data", "-id")[:limite]
+        )
+    ]
+
+    tudo = atendimentos + pacotes + retiradas + custos
+    return sorted(tudo, key=lambda t: t["data"], reverse=True)[:limite]
 
 
 def pets_vip(inicio, fim):

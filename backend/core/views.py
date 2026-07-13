@@ -123,6 +123,13 @@ class DashboardView(APIView):
         )
 
 
+class TransacoesRecentesView(APIView):
+    def get(self, request):
+        inicio, fim = periodo_dos_params(request)
+        transacoes = services.transacoes_recentes(inicio, fim)
+        return Response(serializers.TransacaoSerializer(transacoes, many=True).data)
+
+
 class SerieMensalView(APIView):
     """Rota própria, e não mais um campo do /dashboard/, porque a série custa 3
     queries por mês. Embutida no /dashboard/, a página Financeiro — que só quer dois

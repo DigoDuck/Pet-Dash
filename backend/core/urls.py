@@ -16,5 +16,10 @@ urlpatterns = [
     path("health/", views.healthcheck, name="health"),
     path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
     path("dashboard/serie/", views.SerieMensalView.as_view(), name="dashboard-serie"),
+    path(
+        "dashboard/transacoes/",
+        views.TransacoesRecentesView.as_view(),
+        name="dashboard-transacoes",
+    ),
     path("", include(router.urls)),
 ]
