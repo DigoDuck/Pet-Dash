@@ -106,6 +106,42 @@ export interface PacoteEntrada {
   validade: string;
 }
 
+export type TipoCusto = "fixo" | "variavel";
+
+export interface Custo {
+  id: number;
+  tipo: TipoCusto;
+  descricao: string;
+  valor: string;
+  categoria: string;
+  /** Sempre o dia 1 do mês ("2026-07-01"): a competência da invariante 10. */
+  competencia: string;
+}
+
+export type CustoEntrada = Omit<Custo, "id">;
+
+export interface Retirada {
+  id: number;
+  descricao: string;
+  valor: string;
+  /** Data real do saque, não competência: é assim que o dashboard soma retiradas. */
+  data: string;
+  tipo: string;
+}
+
+export type RetiradaEntrada = Omit<Retirada, "id">;
+
+/** Resposta do GET /dashboard/. Todo valor monetário vem como string (DecimalField
+ *  do DRF); `margem` é fração 0–1. Os KPIs são derivados em query (invariante 9). */
+export interface ResumoFinanceiro {
+  faturamento: string;
+  custos: string;
+  retiradas: string;
+  lucro: string;
+  ticket_medio: string;
+  margem: string;
+}
+
 export interface PagamentoEntrada {
   metodo: "Pix" | "Cartao" | "Dinheiro";
   valor: string;
