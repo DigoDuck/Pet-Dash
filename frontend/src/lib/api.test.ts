@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "../test/msw/server";
-import { ApiError, login, request } from "./api";
+import { ApiError, login, mensagemDeErro, request } from "./api";
 import { getAccessToken, getRefreshToken, setTokens } from "./auth";
 
 const API = "http://localhost:8000/api";
@@ -110,5 +110,23 @@ describe("login", () => {
     await login("patricia", "segredo");
     expect(getAccessToken()).toBe("a1");
     expect(getRefreshToken()).toBe("r1");
+  });
+});
+
+describe("mensagemDeErro", () => {
+  it("extrai a mensagem de non_field_errors do DRF", () => {
+    const erro = new ApiError(400, {
+      non_field_errors: ["Já existe um pacote para este pet nesta competência."],
+    });
+    expect(mensagemDeErro(erro)).toBe("Já existe um pacote para este pet nesta competência.");
+  });
+
+  it("extrai a mensagem de um erro de campo", () => {
+    const erro = new ApiError(400, { valor_pago: ["Informe um número válido."] });
+    expect(mensagemDeErro(erro)).toBe("Informe um número válido.");
+  });
+
+  it("tem fallback para erro que não é da API", () => {
+    expect(mensagemDeErro(new Error("boom"))).toBe("Erro inesperado. Tente de novo.");
   });
 });
