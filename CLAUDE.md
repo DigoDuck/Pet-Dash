@@ -83,7 +83,14 @@ Estas decisões estão **fechadas** e são o núcleo do projeto. Se algo no cód
 
 6. **VIP é calculado, não armazenado.** Critério por pet: 3+ visitas OU +R$500 gastos, via annotation. Ponto cego aceito: tutor com vários pets abaixo do limite nunca vira VIP. Mitigação: o dashboard também mostra "top tutores por gasto total" (query paralela).
 
-7. **Pricing snapshotado.** `Atendimento.valor` é o preço cobrado no dia. `Servico.preco_padrao` é só sugestão de preenchimento. Faturamento histórico **jamais** faz JOIN com o catálogo.
+7. **Pricing snapshotado.** `Atendimento.valor` é o preço cobrado no dia. Os preços do `Servico` são só sugestão de preenchimento. Faturamento histórico **jamais** faz JOIN com o catálogo.
+
+   **Preço por faixa de peso** (tabela da Patricia, jul/2026). Ela precifica por peso, não por porte subjetivo: `preco_padrao` = pequeno (até 10 kg) · `preco_m` = médio (10 a 15 kg) · `preco_g` = grande (acima de 15 kg). Faixa sem preço próprio **cai no preço do pequeno** — sugestão baixa ela corrige na tela; campo vazio a faria digitar do zero em todo atendimento. A tabela original dela pula de "até 10kg" para "12 a 15kg", e a faixa média foi fechada em 10–15kg para não existir pet sem preço (**confirmar com ela**). Acima de 15 kg só o banho tem preço (a partir de R$ 150); nos demais serviços `preco_g` fica vazio de propósito, porque inventar número num campo de preço é pior do que sugerir baixo.
+
+   Regras dela que **não** viram item de catálogo:
+   - **+40% para pet agressivo / contenção especial.** É multiplicador, não serviço. Virou o checkbox `Atendimento.manejo_especial`, que só ajusta a **sugestão** de preço no formulário — o backend nunca recalcula `valor`.
+   - **+R$ 25 do banho medicinal obrigatório** quando se identifica parasita. Acréscimo fixo aplicado na hora; a Patricia digita o valor. Não modelado (dois mecanismos de acréscimo para duas regras seria over-engineering).
+   - **Juros da maquininha no cartão.** Muda o que ela *recebe*, não o que cobra. Fora do MVP; nem a planilha faz.
 
 8. **Pagamento é tabela dedicada (1-N), não enum.** `forma_pagamento` **não** existe como enum no Atendimento. Pagamento simples = 1 linha; misto (Pix R$80 + Dinheiro R$40) = N linhas de `Pagamento`. Conciliação por método sai de `GROUP BY metodo`.
 

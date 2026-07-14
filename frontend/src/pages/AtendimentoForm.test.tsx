@@ -12,17 +12,33 @@ function servicosOk() {
   return http.get(`${BASE}/servicos/`, () =>
     HttpResponse.json({
       count: 1, next: null, previous: null,
-      results: [{ id: 1, nome: "Banho", preco_padrao: "60.00", is_pacote: false, creditos: null, ativo: true }],
+      results: [{
+        id: 1, nome: "Banho", preco_padrao: "60.00", preco_m: null, preco_g: null,
+        is_pacote: false, creditos: null, ativo: true,
+      }],
     }),
   );
 }
 
-function petsOk() {
+/** Catálogo com as três faixas da Patricia: 65 até 10kg, 120 de 10 a 15kg, 150 acima. */
+function servicosComFaixas() {
+  return http.get(`${BASE}/servicos/`, () =>
+    HttpResponse.json({
+      count: 1, next: null, previous: null,
+      results: [{
+        id: 1, nome: "Banho", preco_padrao: "65.00", preco_m: "120.00", preco_g: "150.00",
+        is_pacote: false, creditos: null, ativo: true,
+      }],
+    }),
+  );
+}
+
+function petsOk(porte = "") {
   return http.get(`${BASE}/pets/`, () =>
     HttpResponse.json({
       count: 1, next: null, previous: null,
       results: [{
-        id: 7, tutor: 1, tutor_nome: "Ana Clara", nome: "Luna", raca: "", porte: "",
+        id: 7, tutor: 1, tutor_nome: "Ana Clara", nome: "Luna", raca: "", porte,
         ativo: true, created_at: "", vip: false, qtd_visitas: 0, total_gasto: "0.00",
       }],
     }),
@@ -46,6 +62,60 @@ describe("AtendimentoForm", () => {
     await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
 
     await waitFor(() => expect(screen.getByLabelText("Valor")).toHaveValue("60.00"));
+  });
+
+  // A Patricia cobra por faixa de peso. Sugerir sempre o preço do pequeno faria ela
+  // cobrar R$ 65 de um Golden que custa R$ 150 — todo dia, sem nenhum erro na tela.
+  it("sugere o preço da faixa de peso do pet", async () => {
+    server.use(servicosComFaixas(), petsOk("G"));
+
+    renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
+    await escolherLuna();
+    await screen.findByRole("option", { name: "Banho" });
+
+    await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
+
+    await waitFor(() => expect(screen.getByLabelText("Valor")).toHaveValue("150.00"));
+  });
+
+  it("faixa sem preço próprio cai no preço do pequeno", async () => {
+    // Hidratação custa 30 e a Patricia não deu preço de grande: sugerir 30 (baixo, ela
+    // corrige) é melhor do que deixar o campo vazio ou inventar um número.
+    server.use(
+      http.get(`${BASE}/servicos/`, () =>
+        HttpResponse.json({
+          count: 1, next: null, previous: null,
+          results: [{
+            id: 1, nome: "Hidratação", preco_padrao: "30.00", preco_m: null, preco_g: null,
+            is_pacote: false, creditos: null, ativo: true,
+          }],
+        }),
+      ),
+      petsOk("G"),
+    );
+
+    renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
+    await escolherLuna();
+    await screen.findByRole("option", { name: "Hidratação" });
+
+    await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
+
+    await waitFor(() => expect(screen.getByLabelText("Valor")).toHaveValue("30.00"));
+  });
+
+  it("manejo especial acrescenta 40% à sugestão", async () => {
+    server.use(servicosComFaixas(), petsOk("P"));
+
+    renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
+    await escolherLuna();
+    await screen.findByRole("option", { name: "Banho" });
+    await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
+    await waitFor(() => expect(screen.getByLabelText("Valor")).toHaveValue("65.00"));
+
+    await userEvent.click(screen.getByLabelText(/Manejo especial/));
+
+    // 65 × 1,4 = 91. É sugestão: ela edita por cima se cobrar outro valor.
+    await waitFor(() => expect(screen.getByLabelText("Valor")).toHaveValue("91.00"));
   });
 
   it("pet com pacote vincula e esconde os pagamentos", async () => {

@@ -19,12 +19,35 @@ describe("ServicoForm", () => {
     render(<ServicoForm aoSalvar={aoSalvar} enviando={false} aoCancelar={() => {}} />);
 
     await userEvent.type(screen.getByLabelText("Nome"), "Banho");
-    await userEvent.type(screen.getByLabelText("Preço"), "60.00");
+    await userEvent.type(screen.getByLabelText("Preço · pequeno (até 10 kg)"), "60.00");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    // Faixas em branco viram null, não "": string vazia num DecimalField do DRF volta 400.
+    expect(aoSalvar).toHaveBeenCalledWith({
+      nome: "Banho",
+      preco_padrao: "60.00",
+      preco_m: null,
+      preco_g: null,
+      is_pacote: false,
+      creditos: null,
+    });
+  });
+
+  it("envia os três preços quando as faixas são preenchidas", async () => {
+    const aoSalvar = vi.fn();
+    render(<ServicoForm aoSalvar={aoSalvar} enviando={false} aoCancelar={() => {}} />);
+
+    await userEvent.type(screen.getByLabelText("Nome"), "Banho");
+    await userEvent.type(screen.getByLabelText("Preço · pequeno (até 10 kg)"), "65.00");
+    await userEvent.type(screen.getByLabelText("Preço · médio (10 a 15 kg)"), "120.00");
+    await userEvent.type(screen.getByLabelText("Preço · grande (+15 kg)"), "150.00");
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
     expect(aoSalvar).toHaveBeenCalledWith({
       nome: "Banho",
-      preco_padrao: "60.00",
+      preco_padrao: "65.00",
+      preco_m: "120.00",
+      preco_g: "150.00",
       is_pacote: false,
       creditos: null,
     });
@@ -35,7 +58,7 @@ describe("ServicoForm", () => {
     render(<ServicoForm aoSalvar={aoSalvar} enviando={false} aoCancelar={() => {}} />);
 
     await userEvent.type(screen.getByLabelText("Nome"), "Pacote Fidelidade");
-    await userEvent.type(screen.getByLabelText("Preço"), "220.00");
+    await userEvent.type(screen.getByLabelText("Preço · pequeno (até 10 kg)"), "220.00");
     await userEvent.click(screen.getByLabelText("É pacote?"));
     await userEvent.clear(screen.getByLabelText("Créditos"));
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
@@ -49,13 +72,15 @@ describe("ServicoForm", () => {
     render(<ServicoForm aoSalvar={aoSalvar} enviando={false} aoCancelar={() => {}} />);
 
     await userEvent.type(screen.getByLabelText("Nome"), "Pacote Fidelidade");
-    await userEvent.type(screen.getByLabelText("Preço"), "220.00");
+    await userEvent.type(screen.getByLabelText("Preço · pequeno (até 10 kg)"), "220.00");
     await userEvent.click(screen.getByLabelText("É pacote?"));
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
     expect(aoSalvar).toHaveBeenCalledWith({
       nome: "Pacote Fidelidade",
       preco_padrao: "220.00",
+      preco_m: null,
+      preco_g: null,
       is_pacote: true,
       creditos: 4,
     });

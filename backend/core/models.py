@@ -19,9 +19,13 @@ class Tutor(models.Model):
 
 class Pet(models.Model):
     class Porte(models.TextChoices):
-        PEQUENO = "P", "Pequeno"
-        MEDIO = "M", "Médio"
-        GRANDE = "G", "Grande"
+        # A Patricia precifica por PESO, não por porte subjetivo. Os rótulos carregam
+        # a faixa dela para o campo não virar chute de quem cadastra. A tabela original
+        # pula de "até 10kg" para "12 a 15kg"; a faixa média foi fechada em 10–15kg
+        # para não existir pet sem preço (decisão do Diogo, a confirmar com ela).
+        PEQUENO = "P", "Pequeno (até 10 kg)"
+        MEDIO = "M", "Médio (10 a 15 kg)"
+        GRANDE = "G", "Grande (acima de 15 kg)"
 
     tutor = models.ForeignKey(Tutor, on_delete=models.PROTECT, related_name="pets")
     nome = models.CharField(max_length=80)
@@ -35,9 +39,28 @@ class Pet(models.Model):
 
 
 class Servico(models.Model):
+    """Catálogo. Os três preços são SUGESTÃO de preenchimento, nunca fonte de verdade:
+    `Atendimento.valor` é o snapshot do que foi cobrado no dia (invariante 7).
+
+    Vários itens da tabela da Patricia são "a partir de" (tosa na lâmina, tosa na
+    tesoura, desembolo). Como o preço aqui é só sugestão, o piso serve bem — ela
+    ajusta na tela quando a pelagem pede mais.
+    """
+
     nome = models.CharField(max_length=100)
-    # Só sugestão de preenchimento; Atendimento.valor é o snapshot que vale.
-    preco_padrao = models.DecimalField(max_digits=8, decimal_places=2)
+    # Faixa de peso da Patricia. `preco_padrao` mantém o nome por compatibilidade,
+    # mas é o preço do PEQUENO (até 10 kg) — não um preço "geral".
+    preco_padrao = models.DecimalField(
+        max_digits=8, decimal_places=2, help_text="Preço para pet pequeno (até 10 kg)."
+    )
+    preco_m = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        help_text="Preço para pet médio (10 a 15 kg). Vazio usa o preço do pequeno.",
+    )
+    preco_g = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        help_text="Preço para pet grande (acima de 15 kg). Vazio usa o preço do pequeno.",
+    )
     is_pacote = models.BooleanField(default=False)
     creditos = models.PositiveSmallIntegerField(null=True, blank=True)
     ativo = models.BooleanField(default=True)
@@ -47,6 +70,16 @@ class Servico(models.Model):
 
     def __str__(self):
         return self.nome
+
+    def preco_para(self, porte):
+        """Sugestão de preço para o porte do pet, caindo no preço do pequeno quando a
+        faixa não tem preço próprio. Nunca devolve None: um campo de preço vazio no
+        formulário faria a Patricia digitar do zero em todo atendimento."""
+        if porte == Pet.Porte.MEDIO and self.preco_m is not None:
+            return self.preco_m
+        if porte == Pet.Porte.GRANDE and self.preco_g is not None:
+            return self.preco_g
+        return self.preco_padrao
 
 
 class PacoteContratado(models.Model):
@@ -109,6 +142,11 @@ class Atendimento(models.Model):
     valor = models.DecimalField(max_digits=8, decimal_places=2)
     transporte = models.BooleanField(default=False)
     transporte_valor = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    # Pet agressivo ou que exige contenção especial: +40% sobre o serviço (tempo extra
+    # e manejo diferenciado). O flag NÃO recalcula `valor` no backend — `valor` é o
+    # snapshot do que foi cobrado (invariante 7). Ele existe para sugerir o preço com
+    # o acréscimo no formulário, e para a Patricia conseguir contar os casos depois.
+    manejo_especial = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDENTE)
     created_at = models.DateTimeField(auto_now_add=True)
     
