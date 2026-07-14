@@ -36,7 +36,7 @@ export function GraficoMensal({ serie, mesSelecionado }: GraficoMensalProps) {
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="font-display text-xl text-escuro">Faturamento e custos</h2>
+          <h2 className="font-display text-xl text-escuro">Fluxo de caixa</h2>
           <p className="mt-1 text-sm text-neutro">Últimos {serie.length} meses</p>
         </div>
         <div className="flex items-center gap-4 text-xs text-neutro">

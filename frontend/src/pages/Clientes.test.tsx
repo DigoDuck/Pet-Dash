@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { renderizarComProvedores } from "../test/utils";
 import { server } from "../test/msw/server";
 import { Clientes } from "./Clientes";
@@ -15,6 +15,42 @@ function tutor(id: number, nome: string) {
 function paginado(results: unknown[], count = results.length) {
   return { count, next: null, previous: null, results };
 }
+
+// Nome diferente do tutor da tabela de propósito: os destaques ficam na mesma página
+// que a lista, e um nome repetido tornaria as buscas por texto ambíguas.
+const PET_VIP = {
+  id: 7,
+  tutor: 3,
+  tutor_nome: "Camila Souza",
+  nome: "Luna",
+  raca: "SRD",
+  porte: "M",
+  ativo: true,
+  created_at: "2026-01-01",
+  vip: true,
+  qtd_visitas: 4,
+  total_gasto: "600.00",
+};
+
+const DESTAQUES = {
+  faturamento: "8000.00",
+  custos: "1500.00",
+  retiradas: "2000.00",
+  lucro: "6500.00",
+  ticket_medio: "80.00",
+  margem: "0.8125",
+  qtd_atendimentos: 12,
+  pets_ativos: 3,
+  vip: [PET_VIP],
+  top_tutores: [{ id: 3, nome: "Camila Souza", gasto_total: "600.00" }],
+  custos_por_categoria: [],
+};
+
+// A página passou a consumir /dashboard/ para os Destaques do mês. Sem handler, o MSW
+// está em onUnhandledRequest: "error" e derrubaria todos os testes desta suíte.
+beforeEach(() => {
+  server.use(http.get(`${BASE}/dashboard/`, () => HttpResponse.json(DESTAQUES)));
+});
 
 describe("Clientes", () => {
   it("lista os tutores vindos da API", async () => {
@@ -80,5 +116,31 @@ describe("Clientes", () => {
 
     await waitFor(() => expect(criados).toBe(1));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  // Migrados do Dashboard. Top tutores por gasto é a mitigação do ponto cego do VIP
+  // por pet (invariante 6): sem ele, tutor com vários pets abaixo do limite some.
+  it("mostra os destaques do mês: top tutores e pets VIP", async () => {
+    server.use(http.get(`${BASE}/tutores/`, () => HttpResponse.json(paginado([tutor(3, "Ana Clara")]))));
+
+    renderizarComProvedores(<Clientes />, { rota: "/clientes", caminho: "/clientes" });
+
+    expect(await screen.findByText("Top tutores do mês")).toBeInTheDocument();
+    expect(screen.getByText("Pets VIP")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Luna" })).toHaveAttribute("href", "/pets/7");
+    expect(screen.getByRole("link", { name: "Camila Souza" })).toHaveAttribute("href", "/clientes/3");
+    expect(screen.getByText("4 visitas")).toBeInTheDocument();
+  });
+
+  it("erro nos destaques não derruba a tabela de clientes", async () => {
+    server.use(
+      http.get(`${BASE}/tutores/`, () => HttpResponse.json(paginado([tutor(1, "Ana Clara")]))),
+      http.get(`${BASE}/dashboard/`, () => new HttpResponse(null, { status: 500 })),
+    );
+
+    renderizarComProvedores(<Clientes />, { rota: "/clientes", caminho: "/clientes" });
+
+    expect(await screen.findByText("Não foi possível carregar os pets VIP.")).toBeInTheDocument();
+    expect(screen.getByText("Ana Clara")).toBeInTheDocument();
   });
 });
