@@ -1,4 +1,5 @@
 import {
+  CalendarDays,
   ClipboardList,
   LayoutDashboard,
   LogOut,
@@ -17,10 +18,11 @@ interface ItemNav {
   icon: LucideIcon;
 }
 
-// Agenda, Relatórios e Configurações existem no protótipo do Lovable mas estão
-// fora do MVP (fase 2 do produto). Ver docs/specs/2026-07-02-petdash-plan-design.md.
+// Relatórios e Configurações existem no protótipo do Lovable mas seguem fora do MVP.
+// A Agenda saiu do backlog a pedido da Patricia (jul/2026).
 const navPrincipal: ItemNav[] = [
   { to: "/", label: "Painel financeiro", icon: LayoutDashboard },
+  { to: "/agenda", label: "Agenda", icon: CalendarDays },
   { to: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
   { to: "/clientes", label: "Clientes & Pets", icon: PawPrint },
   { to: "/servicos", label: "Serviços", icon: Scissors },
