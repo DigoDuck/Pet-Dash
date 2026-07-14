@@ -107,7 +107,7 @@ soma da cauda. Vazio vira "Sem categoria". Devolve `[{"categoria": str, "valor":
 ### Exposição
 
 | Rota | Muda o quê |
-|---|---|
+| --- | --- |
 | `GET /api/dashboard/?inicio&fim` | Ganha o campo `custos_por_categoria` na resposta |
 | `GET /api/dashboard/serie/?inicio&fim` | Nova. `SerieMensalView` + `PontoSerieSerializer` |
 
@@ -129,7 +129,7 @@ A validação dos parâmetros (`inicio`/`fim` obrigatórios, ISO, 400 com mensag
 ## Frontend
 
 | Arquivo | Papel |
-|---|---|
+| --- | --- |
 | `lib/types.ts` | `PontoSerie`, `CategoriaCusto`, `TopTutor`; `ResumoFinanceiro` ganha `vip`, `top_tutores`, `custos_por_categoria` |
 | `lib/formato.ts` | `formatarPercentual` (fração `"0.6490"` → `"64,9%"`) e `formatarPrecoCurto` (`"23194.00"` → `"R$ 23,2k"`, para caber no rótulo da barra) |
 | `lib/competencia.ts` | `mesesAnteriores(mes, n)` — os N meses terminando em `mes` |
@@ -193,6 +193,49 @@ de categorias.
 
 ## Fora de escopo
 
-Saldo em caixa · meta mensal · transações recentes · taxa de crescimento vs ano anterior (todos backlog
-explícito) · exportar relatório · `categoria` como enum ou catálogo · comparativo com a planilha real
-(oráculo de verificação, feito sob demanda) · qualquer valor financeiro materializado (invariante 9).
+Saldo em caixa · meta mensal · exportar relatório · `categoria` como enum ou catálogo · comparativo com a
+planilha real (oráculo de verificação, feito sob demanda) · qualquer valor financeiro materializado
+(invariante 9).
+
+## Adendo (2026-07-13): redesign fiel ao protótipo
+
+Aprovado depois da primeira implementação, na mesma branch. O pedido era aproximar a tela do protótipo
+Lovable. Três itens dele não tinham lastro no domínio e foram traduzidos, não obedecidos ao pé da letra:
+
+1. **"Saldo em caixa" → hero de faturamento.** Não existe conta bancária no modelo, e saldo bancário é
+   backlog explícito. O cartão marsala é replicado (peso visual, tipografia gigante, dois botões), mas o
+   número é o **faturamento do mês**, com lucro e margem de apoio. Os botões "Receber/Transferir" viram
+   "Novo atendimento" e "Lançar custo" — ações que existem.
+2. **"Taxa de crescimento vs 2025" → vs mês anterior.** Greenfield, sem migração: não há 2025 no banco.
+   Derivada da série que o gráfico já carrega, sem query nova. Base zero devolve `null`, e o card mostra
+   "—" em vez de `+∞%`.
+3. **Top tutores e Pets VIP saem do painel → migram para `/clientes`.** Remover os dois contrariaria a
+   invariante 6, que nomeia o top tutores como mitigação do ponto cego do VIP por pet. Mudam de endereço,
+   não desaparecem. Mesma query, mesmo cache (`useDashboard` no mês corrente).
+
+### Backend adicional
+
+- `services.transacoes_recentes(inicio, fim, limite=8)` — feed unificado: atendimentos avulsos Liberados
+  (+), vendas de pacote por `data_compra` (+), custos (−), retiradas (−). **Consumo de pacote fica fora**:
+  o dinheiro entrou na venda (invariante 1), e listá-lo como "+R$ 95,00" criaria receita fantasma. Quatro
+  querysets fatiados no banco e ordenados em Python — não um `UNION`, que reescreveria o filtro da
+  invariante 1 numa segunda sintaxe para ordenar 32 linhas em memória.
+- `dashboard_periodo` ganha `qtd_atendimentos` (visitas Liberadas, **incluindo** consumo de pacote) e
+  `pets_ativos`. A variável local homônima vira `qtd_eventos_receita`: ela é o denominador do ticket médio
+  e conta eventos de receita, não visitas. Os dois números precisam continuar distintos, e há teste.
+- Rota `GET /api/dashboard/transacoes/?inicio&fim`, reusando `periodo_dos_params`.
+
+### Bug corrigido (pré-existente, desde o PR 12)
+
+`useAtendimentos` e `usePacotes` não invalidavam `["dashboard"]`. Liberar um atendimento ou vender um
+pacote — as duas coisas que **são** faturamento — deixava KPIs, gráfico e ticket médio no valor antigo até
+um F5, sem erro nem log. Corrigido com `invalidarDashboard(client)` e três testes de regressão, o mais
+importante deles cobrindo a transição `Pendente → Liberado`.
+
+### Decisões de UI
+
+Feed exibe custo como **"Jul/2026"**, não "01/07/2026": `Custo.competencia` tem dia 1 sintético, e mostrar
+o dia afirmaria uma precisão que o dado não tem. Saída de dinheiro é marsala, não vermelho — um aluguel
+pago não é um erro. O hero usa `radial-gradient` no próprio fundo em vez da div desfocada do protótipo
+(blur decorativo é custo de render sem informação). `Carregando...` vira skeleton, que já ocupa a altura
+final e não empurra a página quando o conteúdo chega.
