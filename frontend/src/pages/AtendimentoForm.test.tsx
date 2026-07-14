@@ -61,7 +61,7 @@ describe("AtendimentoForm", () => {
     await screen.findByRole("option", { name: "Banho" });
     await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
 
-    await waitFor(() => expect(screen.getByLabelText("Valor")).toHaveValue("60.00"));
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("60.00"));
   });
 
   // A Patricia cobra por faixa de peso. Sugerir sempre o preço do pequeno faria ela
@@ -75,7 +75,7 @@ describe("AtendimentoForm", () => {
 
     await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
 
-    await waitFor(() => expect(screen.getByLabelText("Valor")).toHaveValue("150.00"));
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00"));
   });
 
   it("faixa sem preço próprio cai no preço do pequeno", async () => {
@@ -100,7 +100,7 @@ describe("AtendimentoForm", () => {
 
     await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
 
-    await waitFor(() => expect(screen.getByLabelText("Valor")).toHaveValue("30.00"));
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("30.00"));
   });
 
   it("manejo especial acrescenta 40% à sugestão", async () => {
@@ -110,12 +110,124 @@ describe("AtendimentoForm", () => {
     await escolherLuna();
     await screen.findByRole("option", { name: "Banho" });
     await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
-    await waitFor(() => expect(screen.getByLabelText("Valor")).toHaveValue("65.00"));
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("65.00"));
 
     await userEvent.click(screen.getByLabelText(/Manejo especial/));
 
     // 65 × 1,4 = 91. É sugestão: ela edita por cima se cobrar outro valor.
-    await waitFor(() => expect(screen.getByLabelText("Valor")).toHaveValue("91.00"));
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("91.00"));
+  });
+
+  // --- Modo edição -------------------------------------------------------------
+  //
+  // Nenhum destes caminhos tinha teste. O form de edição reusava a lógica de criação:
+  // recalculava o vínculo do pacote pelo pacote-ativo DE HOJE e re-sugeria o preço no
+  // mount. Os dois corrompiam dado histórico numa ação rotineira (abrir e salvar).
+
+  function atendimentoExistente(over: Record<string, unknown> = {}) {
+    return {
+      id: 42, pet: 7, pet_nome: "Luna", tutor_nome: "Ana Clara",
+      servico: 1, servico_nome: "Banho", pacote: null,
+      data: "2026-06-25", horario: "10:00:00", valor: "150.00",
+      transporte: false, transporte_valor: "0.00", manejo_especial: false,
+      status: "Liberado", pagamentos: [{ id: 1, metodo: "Pix", valor: "150.00" }],
+      ...over,
+    };
+  }
+
+  function renderizarEdicao() {
+    return renderizarComProvedores(<AtendimentoForm />, {
+      rota: "/atendimentos/42/editar",
+      caminho: "/atendimentos/:id/editar",
+    });
+  }
+
+  // Invariante 7: `Atendimento.valor` é o snapshot do que foi cobrado no dia. Abrir a
+  // edição não pode reescrevê-lo com o preço do catálogo — a Patricia vem corrigir o
+  // horário e sai gravando R$ 65 num banho de Golden que custou R$ 150.
+  it("abrir a edição preserva o valor cobrado, não sugere o preço do catálogo", async () => {
+    server.use(
+      servicosComFaixas(),
+      petsOk("G"),
+      http.get(`${BASE}/atendimentos/42/`, () => HttpResponse.json(atendimentoExistente())),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarEdicao();
+
+    // Espera o registro hidratar o form...
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00"));
+    // ...e o catálogo carregar, que é o gatilho da sugestão. Se algum efeito ainda
+    // sugerir preço na edição, é aqui que o valor histórico vira R$ 65,00.
+    await screen.findByRole("option", { name: "Banho" });
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00");
+  });
+
+  // Invariante 1: o consumo de pacote é excluído do faturamento pelo `pacote_id`.
+  // Desvincular no PATCH transforma o banho em avulso e fatura de novo um dinheiro que
+  // já entrou na venda do pacote.
+  it("editar um consumo de pacote sem saldo preserva o vínculo com o pacote", async () => {
+    let enviado: Record<string, unknown> | null = null;
+    server.use(
+      servicosComFaixas(),
+      petsOk("P"),
+      http.get(`${BASE}/atendimentos/42/`, () =>
+        HttpResponse.json(atendimentoExistente({ pacote: 3, pagamentos: [] })),
+      ),
+      // O pacote está esgotado: é o 4º banho dele. É o caso mais comum de edição —
+      // liberar o último banho do mês.
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () =>
+        HttpResponse.json({
+          id: 3, pet: 7, servico: 1, competencia: "2026-06-01", qtd_total: 4,
+          valor_pago: "290.00", data_compra: "2026-06-01", validade: "2026-06-30", saldo: 0,
+        }),
+      ),
+      http.patch(`${BASE}/atendimentos/42/`, async ({ request }) => {
+        enviado = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: 42 });
+      }),
+    );
+
+    renderizarEdicao();
+    await screen.findByDisplayValue("2026-06-25");
+
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => expect(enviado).not.toBeNull());
+    expect(enviado!.pacote).toBe(3);
+  });
+
+  // Editar um avulso de um pet que HOJE tem pacote com saldo vinculava o atendimento
+  // antigo ao pacote novo e, de quebra, apagava os pagamentos (o update do serializer
+  // recria as linhas a partir do payload).
+  it("editar um avulso não o vincula ao pacote atual nem apaga os pagamentos", async () => {
+    let enviado: Record<string, unknown> | null = null;
+    server.use(
+      servicosComFaixas(),
+      petsOk("P"),
+      http.get(`${BASE}/atendimentos/42/`, () => HttpResponse.json(atendimentoExistente())),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () =>
+        HttpResponse.json({
+          id: 9, pet: 7, servico: 1, competencia: "2026-07-01", qtd_total: 4,
+          valor_pago: "290.00", data_compra: "2026-07-01", validade: "2026-07-31", saldo: 3,
+        }),
+      ),
+      http.patch(`${BASE}/atendimentos/42/`, async ({ request }) => {
+        enviado = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: 42 });
+      }),
+    );
+
+    renderizarEdicao();
+    await screen.findByDisplayValue("2026-06-25");
+
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => expect(enviado).not.toBeNull());
+    expect(enviado!.pacote).toBeNull();
+    expect(enviado!.pagamentos).toHaveLength(1);
   });
 
   it("pet com pacote vincula e esconde os pagamentos", async () => {

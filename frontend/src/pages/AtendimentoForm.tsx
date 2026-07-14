@@ -16,6 +16,8 @@ import {
 import { usePacoteAtivo } from "../hooks/usePacoteAtivo";
 import { useBuscaPets } from "../hooks/usePets";
 import { useServicos } from "../hooks/useServicos";
+import { mensagemDeErro } from "../lib/api";
+import { inicioDaCompetencia, mesDaCompetencia } from "../lib/competencia";
 import { ACRESCIMO_MANEJO, precoParaPorte, type AtendimentoEntrada, type Porte } from "../lib/types";
 
 const VAZIO: AtendimentoEntrada = {
@@ -48,15 +50,22 @@ export function AtendimentoForm() {
     return () => clearTimeout(t);
   }, [textoPet]);
 
+  const { register, handleSubmit, control, watch, setValue, reset, formState } =
+    useForm<AtendimentoEntrada>({ defaultValues: VAZIO });
+
+  // O pacote é procurado na competência do ATENDIMENTO, não na de hoje. A Patricia
+  // lança com atraso (vem de planilha): em 1º de julho, o banho de 30 de junho tem que
+  // consultar o pacote de junho. Consultar o de julho fazia o banho nascer avulso — e o
+  // dinheiro de junho ser faturado duas vezes.
+  const dataAtual = watch("data");
+  const competencia = dataAtual ? inicioDaCompetencia(mesDaCompetencia(dataAtual)) : "";
+
   const buscaPets = useBuscaPets(termoPet);
-  const pacoteAtivo = usePacoteAtivo(petSelecionado?.id ?? null);
+  const pacoteAtivo = usePacoteAtivo(petSelecionado?.id ?? null, competencia);
   const servicos = useServicos("", false);
   const criar = useCriarAtendimento();
   const existente = useAtendimento(editando ? Number(id) : 0);
   const atualizar = useAtualizarAtendimento(editando ? Number(id) : 0);
-
-  const { register, handleSubmit, control, watch, setValue, reset, formState } =
-    useForm<AtendimentoEntrada>({ defaultValues: VAZIO });
 
   // Preenche o form ao editar.
   useEffect(() => {
@@ -74,13 +83,20 @@ export function AtendimentoForm() {
 
   const pacote = pacoteAtivo.data ?? null;
   const temSaldo = pacote != null && pacote.saldo > 0;
-  const usaPacote = temSaldo && !cobrarAvulso;
   const transporte = watch("transporte");
   const valorAtual = watch("valor");
   const transporteAtual = watch("transporte_valor");
   const servicoAtual = watch("servico");
   const manejoEspecial = watch("manejo_especial");
+  const pacoteDoRegistro = watch("pacote");
   const listaServicos = servicos.data?.results ?? [];
+
+  // O vínculo com o pacote, na EDIÇÃO, é o que está gravado no registro — nunca o
+  // recalculado a partir do pacote-ativo de agora. Recalcular era o bug: abrir o 4º
+  // banho (saldo 0) só para corrigir o horário mandava `pacote: null`, o consumo virava
+  // avulso e o dinheiro já pago na venda era faturado de novo (invariante 1).
+  const pacoteVinculado = editando ? pacoteDoRegistro : temSaldo && !cobrarAvulso ? pacote!.id : null;
+  const usaPacote = pacoteVinculado != null;
 
   // O que há a cobrar. O serviço só é devido no avulso (no pacote foi pago na venda);
   // a corrida é devida sempre, porque é cobrada por viagem e não sai da cota.
@@ -91,30 +107,35 @@ export function AtendimentoForm() {
   // Avulso sempre pede pagamento; pacote só quando houve corrida a cobrar.
   const mostrarPagamentos = !usaPacote || valorDevido > 0;
 
-  // Sugere o preço ao trocar o serviço, o pet ou o manejo: os três mudam o valor.
-  // A Patricia cobra por faixa de peso (65 no pequeno, 120 no médio, 150 no grande),
-  // e +40% quando o pet exige contenção especial. É sugestão, sempre editável —
-  // `Atendimento.valor` é o snapshot do que ela de fato cobrou (invariante 7).
-  useEffect(() => {
-    const s = listaServicos.find((x) => x.id === Number(servicoAtual));
+  /** Sugere o preço da faixa de peso do pet (+40% se manejo especial).
+   *
+   *  Chamado só a partir de ação da usuária, e nunca de um `useEffect`. Como efeito, ele
+   *  disparava também quando o `reset()` da edição preenchia o form — e gravava o preço
+   *  do catálogo por cima do valor realmente cobrado, quebrando a invariante 7 (a
+   *  Patricia abria o atendimento para corrigir o horário e saía trocando R$ 150 por
+   *  R$ 65). É a mesma armadilha que o PacoteForm evita com um ref de montagem; aqui,
+   *  não ter efeito nenhum resolve por construção. */
+  function sugerirValor(servicoId: string | number, porte: Porte, manejo: boolean) {
+    const s = listaServicos.find((x) => x.id === Number(servicoId));
     if (!s) return;
-    const base = Number(precoParaPorte(s, petSelecionado?.porte ?? ""));
-    const sugerido = manejoEspecial ? base * ACRESCIMO_MANEJO : base;
-    setValue("valor", sugerido.toFixed(2));
-  }, [servicoAtual, petSelecionado?.porte, manejoEspecial]); // eslint-disable-line react-hooks/exhaustive-deps
+    const base = Number(precoParaPorte(s, porte));
+    setValue("valor", (manejo ? base * ACRESCIMO_MANEJO : base).toFixed(2));
+  }
 
   function escolherPet(item: { id: number; rotulo: string } | null) {
     const pet = buscaPets.data?.results.find((p) => p.id === item?.id);
-    setPetSelecionado(item ? { ...item, porte: pet?.porte ?? "" } : null);
+    const porte = pet?.porte ?? "";
+    setPetSelecionado(item ? { ...item, porte } : null);
     setCobrarAvulso(false); // novo pet volta ao default seguro
     setValue("pet", item?.id ?? 0);
+    sugerirValor(servicoAtual, porte, manejoEspecial);
   }
 
   function enviar(dados: AtendimentoEntrada) {
     const payload: AtendimentoEntrada = {
       ...dados,
       pet: petSelecionado?.id ?? 0,
-      pacote: usaPacote ? pacote!.id : null,
+      pacote: pacoteVinculado,
       // Desmarcar "leva e traz" precisa zerar o valor: o campo some da tela mas o
       // estado do form guarda o que já foi digitado, e o backend fatura
       // `transporte_valor` sem olhar o booleano — uma corrida que não houve entraria
@@ -132,6 +153,10 @@ export function AtendimentoForm() {
   const itensPet =
     buscaPets.data?.results.map((p) => ({ id: p.id, rotulo: `${p.nome} · ${p.tutor_nome}` })) ?? [];
 
+  // O 400 do backend (soma dos pagamentos ≠ devido, pacote sem saldo) era engolido: ela
+  // clicava Salvar e não acontecia nada — sem navegação, sem mensagem, sem pista.
+  const erro = criar.error ?? atualizar.error;
+
   return (
     <div className="max-w-2xl">
       <h1 className="font-display text-3xl text-escuro">
@@ -139,6 +164,12 @@ export function AtendimentoForm() {
       </h1>
 
       <form onSubmit={handleSubmit(enviar)} className="mt-6 flex flex-col gap-4" noValidate>
+        {erro && (
+          <p role="alert" className="rounded-lg bg-erro/10 px-4 py-3 text-sm text-erro">
+            {mensagemDeErro(erro)}
+          </p>
+        )}
+
         <Controller
           control={control}
           name="pet"
@@ -157,14 +188,27 @@ export function AtendimentoForm() {
           )}
         />
 
-        {petSelecionado && usaPacote && pacote && (
+        {/* O banner (e o "cobrar como avulso") só existe na criação: na edição o vínculo
+            é o do registro e trocá-lo depois reescreveria faturamento passado. */}
+        {!editando && petSelecionado && usaPacote && pacote && (
           <PacoteAtivoBanner pacote={pacote} aoCobrarAvulso={() => setCobrarAvulso(true)} />
         )}
-        {petSelecionado && pacote != null && pacote.saldo === 0 && (
+        {!editando && petSelecionado && pacote != null && pacote.saldo === 0 && (
           <p className="text-sm text-erro">Pacote sem saldo neste mês; cobrando como avulso.</p>
         )}
+        {editando && pacoteVinculado != null && (
+          <p className="text-sm text-neutro">
+            Consumo de pacote. O banho já foi pago na venda; o vínculo não muda ao editar.
+          </p>
+        )}
 
-        <Select label="Serviço" {...register("servico")}>
+        <Select
+          label="Serviço"
+          {...register("servico", {
+            onChange: (e) =>
+              sugerirValor(e.target.value, petSelecionado?.porte ?? "", manejoEspecial),
+          })}
+        >
           <option value="0">Selecione...</option>
           {listaServicos.map((s) => (
             <option key={s.id} value={s.id}>
@@ -180,12 +224,16 @@ export function AtendimentoForm() {
 
         <Checkbox
           label="Manejo especial (pet agressivo ou contenção) · +40%"
-          {...register("manejo_especial")}
+          {...register("manejo_especial", {
+            onChange: (e) =>
+              sugerirValor(servicoAtual, petSelecionado?.porte ?? "", e.target.checked),
+          })}
         />
 
-        {/* Sem value= explícito: o register controla o input via ref. O setValue do
-            effect atualiza o valor exibido quando muda serviço, pet ou manejo. */}
-        <Input label="Valor" inputMode="decimal" {...register("valor")} />
+        {/* "Valor do serviço", e não "Valor": a tela tem também o valor do transporte e
+            o valor de cada pagamento. Três campos chamados "Valor" confundem a Patricia
+            e o leitor de tela igualmente. */}
+        <Input label="Valor do serviço" inputMode="decimal" {...register("valor")} />
 
         <Checkbox label="Leva e traz (transporte)" {...register("transporte")} />
         {transporte && (
