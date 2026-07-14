@@ -71,7 +71,7 @@ describe("Servicos", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Novo serviço" })[0]);
 
     await userEvent.type(screen.getByLabelText("Nome"), "Tosa");
-    await userEvent.type(screen.getByLabelText("Preço"), "40.00");
+    await userEvent.type(screen.getByLabelText("Preço · pequeno (até 10 kg)"), "40.00");
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
     await waitFor(() => expect(criados).toBe(1));
