@@ -186,6 +186,15 @@ class Custo(models.Model):
     def __str__(self):
         return f"{self.descricao} · {self.competencia:%m/%Y}"
 
+    def save(self, *args, **kwargs):
+        # O código inteiro assume competência = dia 1 (`serie_mensal` casa exato, a tela
+        # do Financeiro filtra `?competencia=2026-07-01`). Um custo lançado com dia 15
+        # pelo admin entrava no KPI do mês (que usa `__range`) e sumia do gráfico e da
+        # lista — divergência silenciosa entre dois números da mesma tela. O
+        # PacoteContratado já normalizava; o Custo confiava no formulário.
+        self.competencia = self.competencia.replace(day=1)
+        super().save(*args, **kwargs)
+
 
 class Retirada(models.Model):
     descricao = models.CharField(max_length=200)

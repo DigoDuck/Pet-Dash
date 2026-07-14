@@ -92,6 +92,12 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
+    # O /api/token/ é o único ponto de entrada, fica exposto na internet pública e o
+    # repositório é público (o nome de usuário está no scripts/smoke.py). Sem throttle,
+    # um scanner tenta senha sem limite. 20/min não atrapalha ninguém que sabe a senha.
+    # Só o escopo "anon": requisições autenticadas não são limitadas.
+    "DEFAULT_THROTTLE_CLASSES": ("rest_framework.throttling.AnonRateThrottle",),
+    "DEFAULT_THROTTLE_RATES": {"anon": "20/min"},
 }
 
 SIMPLE_JWT = {

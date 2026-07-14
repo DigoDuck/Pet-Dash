@@ -212,9 +212,28 @@ class AtendimentoSerializer(serializers.ModelSerializer):
         # e não faz parte da cota. Uma regra só evita que o ramo do pacote continue
         # sendo o buraco por onde o dinheiro da corrida escapa sem lançamento.
         valor = attrs.get("valor", getattr(self.instance, "valor", 0)) or 0
+
+        # Sem corrida, sem valor de corrida. O faturamento soma `transporte_valor` sem
+        # olhar o booleano; até aqui, quem garantia a coerência era só o formulário —
+        # uma escrita pela API ou pelo admin com `transporte=False, transporte_valor=20`
+        # faturava R$ 20 de uma viagem que nunca houve.
+        tem_transporte = attrs.get(
+            "transporte", getattr(self.instance, "transporte", False)
+        )
+        if not tem_transporte:
+            attrs["transporte_valor"] = 0
+
         transporte = (
             attrs.get("transporte_valor", getattr(self.instance, "transporte_valor", 0)) or 0
         )
+
+        # O pacote tem que ser do MESMO pet. O formulário nunca erra isso, mas a API
+        # aceitava consumir crédito do pacote de outro pet — e o saldo de quem pagou
+        # sumia sem explicação.
+        pet = attrs.get("pet", getattr(self.instance, "pet", None))
+        if pacote is not None and pet is not None and pacote.pet_id != pet.id:
+            raise serializers.ValidationError("O pacote pertence a outro pet.")
+
         devido = transporte if pacote else valor + transporte
 
         pagamentos = attrs.get("pagamentos", [])

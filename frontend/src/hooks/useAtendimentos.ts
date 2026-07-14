@@ -56,8 +56,15 @@ export function useAtendimento(id: number) {
 // Um atendimento avulso Liberado É faturamento. Sem invalidar o dashboard, liberar
 // um atendimento de R$ 95 atualiza a lista e deixa o faturamento, o gráfico e o feed
 // no valor velho até um F5 — a tela contradiz a si mesma sem levantar erro nenhum.
+//
+// E o saldo do pacote é DERIVADO dos atendimentos (invariante 4): criar ou cancelar um
+// consumo muda o saldo. Sem invalidar `pacote-ativo`, o próximo atendimento do mesmo pet
+// consulta um saldo velho — e é o saldo que decide se o banho entra na cota ou vira
+// avulso (faturando de novo o dinheiro do pacote).
 function invalidarAtendimentos(client: QueryClient) {
   client.invalidateQueries({ queryKey: chavesAtendimentos.raiz });
+  client.invalidateQueries({ queryKey: ["pacote-ativo"] });
+  client.invalidateQueries({ queryKey: ["pacotes"] });
   invalidarDashboard(client);
 }
 
