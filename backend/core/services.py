@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Count, DecimalField, Min, Q, Sum, Value
+from django.db.models import Case, Count, DecimalField, F, Min, Q, Sum, Value, When
 from django.db.models.functions import Coalesce, Lower, Trim
 
 from core.models import Atendimento, Custo, PacoteContratado, Pet, Retirada, Tutor
@@ -13,7 +13,32 @@ CATEGORIAS_NO_GRAFICO = 5
 TRANSACOES_NO_FEED = 8
 
 
+def transporte_periodo(inicio, fim):
+    """Receita das corridas: soma de `transporte_valor` de TODO atendimento Liberado.
+
+    Inclui o consumo de pacote de propósito. O banho do pacote já foi pago na venda,
+    mas a corrida até a casa da tutora não — ela é cobrada por viagem, à parte da
+    cota. Restringir isto a avulsos perderia a corrida de todo pet com pacote, que é
+    justamente a cliente mais frequente.
+
+    Confere com a planilha da Patricia somando só os Liberados: mai/2026 R$ 977,00 ·
+    jun/2026 R$ 1.595,50 · jul/2026 R$ 710,00.
+    """
+    return Atendimento.objects.liberados().no_periodo(inicio, fim).aggregate(
+        total=Sum("transporte_valor")
+    )["total"] or Decimal("0")
+
+
 def faturamento_periodo(inicio, fim):
+    """Regime de caixa: pacotes vendidos + serviços avulsos + corridas.
+
+    O transporte entra porque o custo dele já entrava. O sistema contabilizava a
+    manutenção do triciclo e o combustível como custo, e ignorava a receita da
+    corrida — contava a despesa e não a receita da mesma coisa, subestimando o lucro.
+
+    A invariante 1 continua de pé no que importa: o `valor` do consumo de pacote
+    segue fora do faturamento (é o `pacote_id`, não o valor zero, que o exclui).
+    """
     pacotes = PacoteContratado.objects.filter(
         data_compra__gte=inicio, data_compra__lte=fim
     ).aggregate(total=Sum("valor_pago"))["total"] or Decimal("0")
@@ -22,9 +47,9 @@ def faturamento_periodo(inicio, fim):
         Atendimento.objects.avulsos().liberados().no_periodo(inicio, fim)
         .aggregate(total=Sum("valor"))["total"]
         or Decimal("0")
-)
+    )
 
-    return pacotes + avulsos
+    return pacotes + avulsos + transporte_periodo(inicio, fim)
 
 def dashboard_periodo(inicio, fim):
     """KPIs financeiros do período, em regime de caixa.
@@ -47,6 +72,9 @@ def dashboard_periodo(inicio, fim):
       Unificar os dois dividiria o faturamento pelo número errado.
     - pets_ativos: contagem do cadastro, não do período. Viaja aqui por caber no
       mesmo payload da tela que a exibe.
+    - transporte: a parcela do faturamento que veio das corridas. Sai em separado
+      porque é o número que concilia com a planilha da Patricia, e porque ela quer
+      saber se o triciclo se paga (a receita da corrida contra o combustível).
     """
     faturamento = faturamento_periodo(inicio, fim)
 
@@ -77,6 +105,7 @@ def dashboard_periodo(inicio, fim):
 
     return {
         "faturamento": faturamento,
+        "transporte": transporte_periodo(inicio, fim),
         "custos": custos,
         "retiradas": retiradas,
         "lucro": lucro,
@@ -174,28 +203,43 @@ def custos_por_categoria(inicio, fim, limite=CATEGORIAS_NO_GRAFICO):
 def transacoes_recentes(inicio, fim, limite=TRANSACOES_NO_FEED):
     """Feed de caixa do período, mais recente primeiro.
 
-    Consumo de pacote fica FORA. O 2º banho é um atendimento normal, mas o dinheiro
-    dele entrou na venda (invariante 1) — mostrá-lo como "+R$ 95,00" criaria receita
-    que não existe. Por isso o filtro reusa `avulsos().liberados()`, os mesmos
-    métodos de queryset do faturamento: a regra continua morando num lugar só.
+    Um atendimento entra se trouxe dinheiro, e pelo dinheiro que trouxe. É uma regra
+    só, e ela resolve os três casos:
+
+    - avulso: trouxe o serviço mais a corrida (`valor + transporte_valor`);
+    - consumo de pacote COM corrida: trouxe só a corrida (o banho foi pago na venda);
+    - consumo de pacote sem corrida: não trouxe nada, e fica fora.
+
+    O `valor` do consumo nunca entra — é a invariante 1. Mostrá-lo como "+R$ 95,00"
+    criaria receita que não existe, o mesmo faturar-em-dobro de sempre, agora pela
+    porta do design.
+
+    A anotação `receita` faz esse recorte no banco, e não em Python, porque o slice
+    `[:limite]` acontece na query: filtrar depois devolveria menos de 8 linhas.
 
     Quatro querysets já fatiados no banco e ordenados em Python, em vez de um UNION.
     O UNION exigiria homogeneizar quatro models heterogêneos com `Value()` anotado e
-    reescreveria o filtro da invariante 1 numa segunda sintaxe — tudo isso para
-    ordenar 32 linhas em memória.
+    reescreveria a regra numa segunda sintaxe — tudo isso para ordenar 32 linhas.
 
     Empate de data é resolvido pela ordem fixa da concatenação (receitas antes de
     despesas no mesmo dia), porque o `sorted` do Python é estável.
     """
+    receita_do_atendimento = Case(
+        When(pacote__isnull=True, then=F("valor") + F("transporte_valor")),
+        default=F("transporte_valor"),
+        output_field=DecimalField(max_digits=10, decimal_places=2),
+    )
     atendimentos = [
         {
             "tipo": "atendimento",
             "descricao": f"{a.servico.nome} · {a.pet.nome}",
-            "valor": a.valor,
+            "valor": a.receita,
             "data": a.data,
         }
         for a in (
-            Atendimento.objects.avulsos().liberados().no_periodo(inicio, fim)
+            Atendimento.objects.liberados().no_periodo(inicio, fim)
+            .annotate(receita=receita_do_atendimento)
+            .filter(receita__gt=0)
             .select_related("servico", "pet")
             .order_by("-data", "-id")[:limite]
         )

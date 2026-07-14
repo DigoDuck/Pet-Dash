@@ -9,6 +9,7 @@ const BASE = "http://localhost:8000/api";
 
 const RESUMO = {
   faturamento: "8000.00",
+  transporte: "480.00",
   custos: "1500.00",
   retiradas: "2000.00",
   lucro: "6500.00",
@@ -191,8 +192,8 @@ describe("Dashboard", () => {
 
     renderizar();
 
-    // Hero + 4 KPIs + 2 contadores; o crescimento vem da série, que não falhou.
-    await waitFor(() => expect(screen.getAllByText("—")).toHaveLength(7));
+    // Hero + 4 KPIs + transporte + 2 contadores; o crescimento vem da série, que não falhou.
+    await waitFor(() => expect(screen.getAllByText("—")).toHaveLength(8));
     expect(screen.queryByText("R$ 0,00")).not.toBeInTheDocument();
   });
 
@@ -218,6 +219,7 @@ describe("Dashboard", () => {
         HttpResponse.json({
           ...RESUMO,
           faturamento: "0.00",
+          transporte: "0.00",
           custos: "0.00",
           retiradas: "0.00",
           lucro: "0.00",

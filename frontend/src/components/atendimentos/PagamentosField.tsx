@@ -7,18 +7,19 @@ interface PagamentosFieldProps {
   control: Control<AtendimentoEntrada>;
   register: UseFormRegister<AtendimentoEntrada>;
   watch: UseFormWatch<AtendimentoEntrada>;
-  valorAtendimento: string;
+  /** Serviço + transporte no avulso; só o transporte no consumo de pacote. Quem
+   *  calcula é o form, que é quem sabe se o pacote está sendo usado. */
+  valorDevido: number;
 }
 
 const METODOS = ["Pix", "Cartao", "Dinheiro"] as const;
 
-export function PagamentosField({ control, register, watch, valorAtendimento }: PagamentosFieldProps) {
+export function PagamentosField({ control, register, watch, valorDevido }: PagamentosFieldProps) {
   const { fields, append, remove } = useFieldArray({ control, name: "pagamentos" });
   const pagamentos = watch("pagamentos") ?? [];
 
   const soma = pagamentos.reduce((s, p) => s + Number(p.valor || 0), 0);
-  const alvo = Number(valorAtendimento || 0);
-  const diferenca = Number((alvo - soma).toFixed(2));
+  const diferenca = Number((valorDevido - soma).toFixed(2));
 
   return (
     <div className="flex flex-col gap-3">
@@ -69,7 +70,12 @@ export function PagamentosField({ control, register, watch, valorAtendimento }: 
         </div>
       ))}
 
-      <div className="text-sm">
+      {/* O total a cobrar fica explícito: sem ele, a Patricia vê "Falta R$ 20,00"
+          depois de lançar o valor do banho e não entende que o que falta é a corrida. */}
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-neutro">
+          Total a cobrar: <span className="font-mono text-escuro">{formatarPreco(valorDevido)}</span>
+        </span>
         {diferenca === 0 ? (
           <span className="text-sucesso">Soma confere</span>
         ) : diferenca > 0 ? (
