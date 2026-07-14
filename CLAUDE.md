@@ -69,7 +69,9 @@ Ordem de implementação dos models: `Tutor`, `Pet`, `Servico` (sem dependência
 
 Estas decisões estão **fechadas** e são o núcleo do projeto. Se algo no código as contrariar, **PARE e me avise**. Encapsular a regra de faturamento num manager/método do model, nunca espalhar por views.
 
-1. **Faturamento em regime de caixa.** Faturamento de um período = soma de `PacoteContratado.valor_pago` com `data_compra` no período + soma de `Atendimento.valor` dos **avulsos** (`pacote_id IS NULL`) com status `Liberado` no período. Atendimento de consumo de pacote **não** soma (já foi pago na venda). Esquecer o filtro `pacote_id IS NULL` conta o dinheiro do pacote duas vezes.
+1. **Faturamento em regime de caixa.** Faturamento de um período = soma de `PacoteContratado.valor_pago` com `data_compra` no período + soma de `Atendimento.valor` dos **avulsos** (`pacote_id IS NULL`) com status `Liberado` no período + soma de `Atendimento.transporte_valor` de **todos** os `Liberado` no período (inclusive consumo de pacote). O `valor` do consumo de pacote **não** soma (já foi pago na venda); o `transporte_valor` dele soma, porque a corrida é cobrada por viagem e não sai da cota. Esquecer o filtro `pacote_id IS NULL` no `valor` conta o dinheiro do pacote duas vezes; restringir o `transporte_valor` a avulsos perde a corrida de toda cliente com pacote.
+
+   > O transporte entrou no faturamento em 14/07/2026 (PR `fix/transporte-faturamento`). Antes disso o sistema contabilizava o **custo** do triciclo (manutenção fixa + combustível) e ignorava a **receita** da corrida, subestimando o lucro; e `transporte_valor` era dado morto — gravado, nunca cobrado, nunca conciliado. A planilha da Patricia sempre contou o transporte na receita ("Faturamento Bruto = serviços + receita do transporte"), e o total bate com a soma dos `Liberado`.
 
 2. **O que exclui um atendimento do faturamento é o `pacote_id` preenchido, não valor zero.** O 2º/3º/4º banho do pacote são atendimentos normais (contam em frequência, histórico, VIP), com `pacote_id` apontando ao pacote. `Atendimento.valor` guarda o preço de referência e **nunca é zerado** (zerar corrompe ticket médio e conciliação). O vínculo com o pacote é o que os tira do faturamento.
 
@@ -93,7 +95,7 @@ Estas decisões estão **fechadas** e são o núcleo do projeto. Se algo no cód
 
 ### Regras que o schema NÃO garante (validar na aplicação, com teste unitário desde o 1º commit)
 
-- `sum(Pagamento.valor) == Atendimento.valor` para avulsos, validar no serializer.
+- `sum(Pagamento.valor) == valor cobrado`, validar no serializer. O valor cobrado é `valor + transporte_valor` no avulso e **só** `transporte_valor` no consumo de pacote (o serviço já foi pago na venda). Uma regra só para os dois ramos: enquanto o ramo do pacote pulava a validação, o dinheiro da corrida escapava sem nenhuma linha de `Pagamento`.
 - Filtro `pacote_id IS NULL` no somatório de avulsos do faturamento.
 - `UNIQUE(pet_id, competencia)` no `PacoteContratado`.
 - Todo atendimento de pet com pacote ativo no mês precisa gravar `pacote_id`; se esquecer, vira avulso e fatura em dobro. Forçar/sugerir na UI.

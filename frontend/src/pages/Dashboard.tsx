@@ -130,7 +130,14 @@ export function Dashboard() {
           </Bloco>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3 lg:col-span-4 lg:grid-cols-1">
+        <div className="grid gap-4 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1">
+          <KpiCard
+            rotulo="Transporte"
+            valor={resumo.data && formatarPreco(resumo.data.transporte)}
+            sub="Já incluso no faturamento"
+            carregando={resumo.isPending}
+            erro={resumo.isError}
+          />
           <KpiCard
             rotulo="Atendimentos"
             valor={resumo.data && String(resumo.data.qtd_atendimentos)}

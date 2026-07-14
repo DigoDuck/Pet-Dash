@@ -156,6 +156,10 @@ export interface PontoSerie {
  *  do DRF); `margem` é fração 0–1. Os KPIs são derivados em query (invariante 9). */
 export interface ResumoFinanceiro {
   faturamento: string;
+  /** Parcela do faturamento que veio das corridas (já somada em `faturamento`).
+   *  Sai em separado para responder "o triciclo se paga?" e para conciliar com a
+   *  planilha, que sempre contou o transporte na receita. */
+  transporte: string;
   custos: string;
   retiradas: string;
   lucro: string;

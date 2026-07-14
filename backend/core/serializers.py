@@ -158,6 +158,9 @@ class DashboardSerializer(serializers.Serializer):
     lucro = serializers.DecimalField(max_digits=10, decimal_places=2)
     ticket_medio = serializers.DecimalField(max_digits=10, decimal_places=2)
     margem = serializers.DecimalField(max_digits=6, decimal_places=4)
+    # Parcela do faturamento que veio das corridas. É o número que concilia com a
+    # planilha e responde "o triciclo se paga?".
+    transporte = serializers.DecimalField(max_digits=10, decimal_places=2)
     # Visitas Liberadas (inclui consumo de pacote) — não confundir com o denominador
     # do ticket médio, que conta eventos de receita. Ver dashboard_periodo.
     qtd_atendimentos = serializers.IntegerField()
@@ -200,16 +203,25 @@ class AtendimentoSerializer(serializers.ModelSerializer):
         # No PATCH, os campos podem não vir; herdar do instance (update parcial).
         pacote = attrs.get("pacote", getattr(self.instance, "pacote", None))
 
-        if pacote is None:
-            pagamentos = attrs.get("pagamentos", [])
-            if pagamentos:
-                valor_atendimento = attrs.get("valor", getattr(self.instance, "valor", 0))
-                valor_pagamentos = sum(p.get("valor", 0) for p in pagamentos)
-                if valor_atendimento != valor_pagamentos:
-                    raise serializers.ValidationError(
-                        "O valor do atendimento deve ser igual à soma dos pagamentos."
-                    )
-        else:
+        # O quanto há a cobrar neste atendimento, valendo para os dois ramos:
+        # o serviço só é devido no avulso (no pacote ele foi pago na venda —
+        # invariante 1), mas a corrida é devida sempre, porque é cobrada por viagem
+        # e não faz parte da cota. Uma regra só evita que o ramo do pacote continue
+        # sendo o buraco por onde o dinheiro da corrida escapa sem lançamento.
+        valor = attrs.get("valor", getattr(self.instance, "valor", 0)) or 0
+        transporte = (
+            attrs.get("transporte_valor", getattr(self.instance, "transporte_valor", 0)) or 0
+        )
+        devido = transporte if pacote else valor + transporte
+
+        pagamentos = attrs.get("pagamentos", [])
+        if pagamentos and sum(p.get("valor", 0) for p in pagamentos) != devido:
+            raise serializers.ValidationError(
+                "A soma dos pagamentos deve ser igual ao valor cobrado "
+                "(serviço + transporte; no pacote, só o transporte)."
+            )
+
+        if pacote is not None:
             status = attrs.get("status", getattr(self.instance, "status", None))
             ocupa_credito = status != models.Atendimento.Status.CANCELADO
             # Créditos ocupados por OUTROS atendimentos: no update, exclui o próprio,

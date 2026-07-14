@@ -66,8 +66,18 @@ export function AtendimentoForm() {
   const usaPacote = temSaldo && !cobrarAvulso;
   const transporte = watch("transporte");
   const valorAtual = watch("valor");
+  const transporteAtual = watch("transporte_valor");
   const servicoAtual = watch("servico");
   const listaServicos = servicos.data?.results ?? [];
+
+  // O que há a cobrar. O serviço só é devido no avulso (no pacote foi pago na venda);
+  // a corrida é devida sempre, porque é cobrada por viagem e não sai da cota.
+  const valorDevido =
+    (usaPacote ? 0 : Number(valorAtual || 0)) +
+    (transporte ? Number(transporteAtual || 0) : 0);
+
+  // Avulso sempre pede pagamento; pacote só quando houve corrida a cobrar.
+  const mostrarPagamentos = !usaPacote || valorDevido > 0;
 
   // Ao escolher o serviço, sugere o preço de referência (editável).
   useEffect(() => {
@@ -86,7 +96,12 @@ export function AtendimentoForm() {
       ...dados,
       pet: petSelecionado?.id ?? 0,
       pacote: usaPacote ? pacote!.id : null,
-      pagamentos: usaPacote ? [] : dados.pagamentos,
+      // Desmarcar "leva e traz" precisa zerar o valor: o campo some da tela mas o
+      // estado do form guarda o que já foi digitado, e o backend fatura
+      // `transporte_valor` sem olhar o booleano — uma corrida que não houve entraria
+      // no faturamento.
+      transporte_valor: dados.transporte ? dados.transporte_valor : "0.00",
+      pagamentos: mostrarPagamentos ? dados.pagamentos : [],
     };
     if (editando) {
       atualizar.mutate(payload, { onSuccess: () => navigate("/atendimentos") });
@@ -159,12 +174,17 @@ export function AtendimentoForm() {
           <option value="Cancelado">Cancelado</option>
         </Select>
 
-        {!usaPacote && (
+        {/* No pacote, o banho já foi pago na venda — mas a corrida não, e ela é
+            cobrada por viagem. Esconder os pagamentos sempre que houver pacote era
+            o buraco por onde o dinheiro do transporte sumia sem lançamento.
+            No avulso o bloco aparece sempre, mesmo antes de digitar o valor: gatear
+            por `valorDevido > 0` esconderia os pagamentos do formulário em branco. */}
+        {mostrarPagamentos && (
           <PagamentosField
             control={control}
             register={register}
             watch={watch}
-            valorAtendimento={valorAtual}
+            valorDevido={valorDevido}
           />
         )}
 
