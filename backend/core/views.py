@@ -58,7 +58,13 @@ class PetViewSet(viewsets.ModelViewSet):
     def pacote_ativo(self, request, pk=None):
         competencia_param = request.query_params.get("competencia")
         if competencia_param:
-            competencia = date.fromisoformat(competencia_param).replace(day=1)
+            try:
+                competencia = date.fromisoformat(competencia_param).replace(day=1)
+            except ValueError as erro:
+                # Sem o try, uma competência malformada estourava 500. O formulário de
+                # atendimento passou a mandar esse parâmetro em toda busca de pacote,
+                # então o caminho deixou de ser hipotético.
+                raise ParseError("Data inválida; use o formato YYYY-MM-DD.") from erro
         else:
             competencia = date.today().replace(day=1)
 
@@ -135,8 +141,18 @@ class SerieMensalView(APIView):
     queries por mês. Embutida no /dashboard/, a página Financeiro — que só quer dois
     totais — passaria a pagar o gráfico inteiro a cada troca de mês."""
 
+    # A série faz 3 queries POR MÊS do intervalo. Sem teto, um `?inicio=0202-01-01`
+    # (ISO válido) gera dezenas de milhares de meses e trava o worker até o timeout —
+    # a Railway roda num plano barato. O gráfico pede 6 meses; 24 é folga generosa.
+    MAX_MESES = 24
+
     def get(self, request):
         inicio, fim = periodo_dos_params(request)
+
+        meses = (fim.year - inicio.year) * 12 + (fim.month - inicio.month) + 1
+        if meses > self.MAX_MESES:
+            raise ParseError(f"Intervalo longo demais: máximo de {self.MAX_MESES} meses.")
+
         serie = services.serie_mensal(inicio, fim)
         return Response(serializers.PontoSerieSerializer(serie, many=True).data)
 
