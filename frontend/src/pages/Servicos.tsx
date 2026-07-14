@@ -172,6 +172,8 @@ function ModalEdicao({ servico, aoFechar }: { servico: Servico; aoFechar: () => 
         inicial={{
           nome: servico.nome,
           preco_padrao: servico.preco_padrao,
+          preco_m: servico.preco_m,
+          preco_g: servico.preco_g,
           is_pacote: servico.is_pacote,
           creditos: servico.creditos,
         }}

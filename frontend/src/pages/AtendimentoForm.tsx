@@ -16,11 +16,12 @@ import {
 import { usePacoteAtivo } from "../hooks/usePacoteAtivo";
 import { useBuscaPets } from "../hooks/usePets";
 import { useServicos } from "../hooks/useServicos";
-import type { AtendimentoEntrada } from "../lib/types";
+import { ACRESCIMO_MANEJO, precoParaPorte, type AtendimentoEntrada, type Porte } from "../lib/types";
 
 const VAZIO: AtendimentoEntrada = {
   pet: 0, servico: 0, pacote: null, data: "", horario: "", valor: "",
-  transporte: false, transporte_valor: "0.00", status: "Pendente", pagamentos: [],
+  transporte: false, transporte_valor: "0.00", manejo_especial: false,
+  status: "Pendente", pagamentos: [],
 };
 
 export function AtendimentoForm() {
@@ -30,7 +31,14 @@ export function AtendimentoForm() {
 
   const [textoPet, setTextoPet] = useState("");
   const [termoPet, setTermoPet] = useState("");
-  const [petSelecionado, setPetSelecionado] = useState<{ id: number; rotulo: string } | null>(null);
+  // O porte viaja junto com o pet selecionado, capturado no momento da escolha. Olhar
+  // `buscaPets` na hora de sugerir o preço não serviria: o termo da busca muda, a
+  // lista de resultados muda, e o pet escolhido some dela — o porte viraria "".
+  const [petSelecionado, setPetSelecionado] = useState<{
+    id: number;
+    rotulo: string;
+    porte: Porte;
+  } | null>(null);
   const [cobrarAvulso, setCobrarAvulso] = useState(false);
 
   // Debounce da busca de pet (300ms), como em Clientes/Servicos: sem isto cada
@@ -57,7 +65,10 @@ export function AtendimentoForm() {
         ...existente.data,
         pagamentos: existente.data.pagamentos.map((p) => ({ metodo: p.metodo, valor: p.valor })),
       });
-      setPetSelecionado({ id: existente.data.pet, rotulo: existente.data.pet_nome });
+      // Ao editar, o porte não vem no payload do atendimento. Fica "" e a sugestão de
+      // preço cai na faixa do pequeno — o que não importa: o `valor` já foi carregado
+      // do registro, e a sugestão só sobrescreve se ela trocar o serviço.
+      setPetSelecionado({ id: existente.data.pet, rotulo: existente.data.pet_nome, porte: "" });
     }
   }, [existente.data, reset]);
 
@@ -68,6 +79,7 @@ export function AtendimentoForm() {
   const valorAtual = watch("valor");
   const transporteAtual = watch("transporte_valor");
   const servicoAtual = watch("servico");
+  const manejoEspecial = watch("manejo_especial");
   const listaServicos = servicos.data?.results ?? [];
 
   // O que há a cobrar. O serviço só é devido no avulso (no pacote foi pago na venda);
@@ -79,14 +91,21 @@ export function AtendimentoForm() {
   // Avulso sempre pede pagamento; pacote só quando houve corrida a cobrar.
   const mostrarPagamentos = !usaPacote || valorDevido > 0;
 
-  // Ao escolher o serviço, sugere o preço de referência (editável).
+  // Sugere o preço ao trocar o serviço, o pet ou o manejo: os três mudam o valor.
+  // A Patricia cobra por faixa de peso (65 no pequeno, 120 no médio, 150 no grande),
+  // e +40% quando o pet exige contenção especial. É sugestão, sempre editável —
+  // `Atendimento.valor` é o snapshot do que ela de fato cobrou (invariante 7).
   useEffect(() => {
     const s = listaServicos.find((x) => x.id === Number(servicoAtual));
-    if (s) setValue("valor", s.preco_padrao);
-  }, [servicoAtual]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!s) return;
+    const base = Number(precoParaPorte(s, petSelecionado?.porte ?? ""));
+    const sugerido = manejoEspecial ? base * ACRESCIMO_MANEJO : base;
+    setValue("valor", sugerido.toFixed(2));
+  }, [servicoAtual, petSelecionado?.porte, manejoEspecial]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function escolherPet(item: { id: number; rotulo: string } | null) {
-    setPetSelecionado(item);
+    const pet = buscaPets.data?.results.find((p) => p.id === item?.id);
+    setPetSelecionado(item ? { ...item, porte: pet?.porte ?? "" } : null);
     setCobrarAvulso(false); // novo pet volta ao default seguro
     setValue("pet", item?.id ?? 0);
   }
@@ -159,8 +178,13 @@ export function AtendimentoForm() {
           <Input label="Horário" type="time" {...register("horario")} />
         </div>
 
-        {/* Sem value= explícito: o register controla o input via ref. O
-            setValue no effect do serviço atualiza o valor exibido. */}
+        <Checkbox
+          label="Manejo especial (pet agressivo ou contenção) · +40%"
+          {...register("manejo_especial")}
+        />
+
+        {/* Sem value= explícito: o register controla o input via ref. O setValue do
+            effect atualiza o valor exibido quando muda serviço, pet ou manejo. */}
         <Input label="Valor" inputMode="decimal" {...register("valor")} />
 
         <Checkbox label="Leva e traz (transporte)" {...register("transporte")} />

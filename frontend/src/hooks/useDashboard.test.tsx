@@ -28,6 +28,7 @@ const ATENDIMENTO = {
   valor: "95.00",
   transporte: false,
   transporte_valor: "0.00",
+  manejo_especial: false,
   status: "Liberado" as const,
   pagamentos: [{ metodo: "Pix" as const, valor: "95.00" }],
 };

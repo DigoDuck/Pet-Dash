@@ -48,7 +48,10 @@ class PetSerializer(serializers.ModelSerializer):
 class ServicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Servico
-        fields = ["id", "nome", "preco_padrao", "is_pacote", "creditos", "ativo"]
+        fields = [
+            "id", "nome", "preco_padrao", "preco_m", "preco_g",
+            "is_pacote", "creditos", "ativo",
+        ]
 
 
 class PagamentoSerializer(serializers.ModelSerializer):
@@ -178,7 +181,7 @@ class AtendimentoSerializer(serializers.ModelSerializer):
         fields = [
             "id", "pet", "pet_nome", "tutor_nome", "servico", "servico_nome",
             "pacote", "data", "horario", "valor", "transporte", "transporte_valor",
-            "status", "pagamentos",
+            "manejo_especial", "status", "pagamentos",
         ]
 
     def create(self, validated_data):

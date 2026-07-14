@@ -52,15 +52,20 @@ export interface Atendimento {
   valor: string;
   transporte: boolean;
   transporte_valor: string;
+  /** Pet agressivo / contenção especial (+40%). Não recalcula `valor` no backend:
+   *  `valor` é o snapshot do cobrado. Serve à sugestão de preço e à contagem. */
+  manejo_especial: boolean;
   status: StatusAtendimento;
   pagamentos: Pagamento[];
 }
 
+/** A Patricia precifica por PESO. Os rótulos carregam a faixa dela para o porte não
+ *  virar chute de quem cadastra — é ele que escolhe o preço sugerido no atendimento. */
 export const PORTES: { valor: Porte; rotulo: string }[] = [
   { valor: "", rotulo: "Não informado" },
-  { valor: "P", rotulo: "Pequeno" },
-  { valor: "M", rotulo: "Médio" },
-  { valor: "G", rotulo: "Grande" },
+  { valor: "P", rotulo: "Pequeno (até 10 kg)" },
+  { valor: "M", rotulo: "Médio (10 a 15 kg)" },
+  { valor: "G", rotulo: "Grande (acima de 15 kg)" },
 ];
 
 export const TAMANHO_PAGINA = 50;
@@ -68,7 +73,13 @@ export const TAMANHO_PAGINA = 50;
 export interface Servico {
   id: number;
   nome: string;
+  /** Preço do pet pequeno (até 10 kg). Mantém o nome por compatibilidade, mas não é
+   *  um preço "geral": é a faixa 1. Só sugestão de preenchimento (invariante 7). */
   preco_padrao: string;
+  /** Médio (10 a 15 kg). Vazio cai no preço do pequeno. */
+  preco_m: string | null;
+  /** Grande (acima de 15 kg). Vazio cai no preço do pequeno. */
+  preco_g: string | null;
   is_pacote: boolean;
   creditos: number | null;
   ativo: boolean;
@@ -76,8 +87,21 @@ export interface Servico {
 
 export type ServicoEntrada = Pick<
   Servico,
-  "nome" | "preco_padrao" | "is_pacote" | "creditos"
+  "nome" | "preco_padrao" | "preco_m" | "preco_g" | "is_pacote" | "creditos"
 >;
+
+/** Sugestão de preço para o porte do pet, caindo no preço do pequeno quando a faixa
+ *  não tem preço próprio. Espelha `Servico.preco_para` no backend — sugestão baixa a
+ *  Patricia corrige; campo vazio a faz digitar do zero em todo atendimento. */
+export function precoParaPorte(servico: Servico, porte: Porte): string {
+  if (porte === "M" && servico.preco_m) return servico.preco_m;
+  if (porte === "G" && servico.preco_g) return servico.preco_g;
+  return servico.preco_padrao;
+}
+
+/** Pet agressivo ou que exige contenção especial: +40% sobre o serviço (tempo extra,
+ *  manejo diferenciado, segurança da equipe). Regra da tabela da Patricia. */
+export const ACRESCIMO_MANEJO = 1.4;
 
 export interface Pacote {
   id: number;
@@ -201,6 +225,7 @@ export interface AtendimentoEntrada {
   valor: string;
   transporte: boolean;
   transporte_valor: string;
+  manejo_especial: boolean;
   status: StatusAtendimento;
   pagamentos: PagamentoEntrada[];
 }
