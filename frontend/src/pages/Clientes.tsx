@@ -2,12 +2,17 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ErroAoCarregar } from "../components/ErroAoCarregar";
 import { EstadoVazio } from "../components/EstadoVazio";
+import { PetsVip } from "../components/clientes/PetsVip";
+import { TopTutores } from "../components/clientes/TopTutores";
 import { TutorForm } from "../components/clientes/TutorForm";
+import { Bloco } from "../components/ui/Bloco";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { Paginacao } from "../components/ui/Paginacao";
+import { useDashboard } from "../hooks/useDashboard";
 import { useCriarTutor, useTutores } from "../hooks/useTutores";
+import { inicioDaCompetencia, mesCorrente, ultimoDiaDoMes } from "../lib/competencia";
 
 export function Clientes() {
   const [texto, setTexto] = useState("");
@@ -27,6 +32,11 @@ export function Clientes() {
 
   const { data, isPending, isError, refetch } = useTutores(busca, pagina);
   const criar = useCriarTutor();
+
+  // Mesma chave que o Dashboard usa no mês corrente: a resposta vem do cache, sem
+  // request novo, se a Patricia passou pelo painel antes de abrir os clientes.
+  const mes = mesCorrente();
+  const destaques = useDashboard(inicioDaCompetencia(mes), ultimoDiaDoMes(mes));
 
   return (
     <div>
@@ -97,6 +107,21 @@ export function Clientes() {
           </>
         )}
       </div>
+
+      {/* Top tutores por gasto ao lado do VIP por pet: é a mitigação do ponto cego da
+          invariante 6 (tutor com vários pets abaixo do limite nunca vira VIP sozinho).
+          Vive aqui, e não no painel financeiro, porque a pergunta é sobre gente. */}
+      <section className="mt-12">
+        <h2 className="font-display text-2xl text-escuro">Destaques do mês</h2>
+        <div className="mt-4 grid gap-5 md:grid-cols-2">
+          <Bloco consulta={destaques} rotuloErro="Não foi possível carregar os tutores.">
+            {(dados) => <TopTutores tutores={dados.top_tutores} />}
+          </Bloco>
+          <Bloco consulta={destaques} rotuloErro="Não foi possível carregar os pets VIP.">
+            {(dados) => <PetsVip pets={dados.vip} />}
+          </Bloco>
+        </div>
+      </section>
 
       <Modal aberto={modalAberto} titulo="Novo tutor" aoFechar={() => setModalAberto(false)}>
         <TutorForm

@@ -131,6 +131,27 @@ export interface Retirada {
 
 export type RetiradaEntrada = Omit<Retirada, "id">;
 
+export interface TopTutor {
+  id: number;
+  nome: string;
+  gasto_total: string;
+}
+
+/** Uma fatia do gráfico de despesas. O backend já funde as variações de digitação
+ *  ("Aluguel" / "aluguel") e corta a cauda numa linha "Outros". */
+export interface CategoriaCusto {
+  categoria: string;
+  valor: string;
+}
+
+/** Um mês do gráfico. `competencia` é sempre o dia 1 ("2026-06-01"). */
+export interface PontoSerie {
+  competencia: string;
+  faturamento: string;
+  custos: string;
+  lucro: string;
+}
+
 /** Resposta do GET /dashboard/. Todo valor monetário vem como string (DecimalField
  *  do DRF); `margem` é fração 0–1. Os KPIs são derivados em query (invariante 9). */
 export interface ResumoFinanceiro {
@@ -140,6 +161,26 @@ export interface ResumoFinanceiro {
   lucro: string;
   ticket_medio: string;
   margem: string;
+  /** Visitas Liberadas no período, incluindo consumo de pacote. NÃO é o denominador
+   *  do ticket médio, que conta eventos de receita (venda de pacote + avulso). */
+  qtd_atendimentos: number;
+  /** Contagem do cadastro (Pet.ativo), não do período. */
+  pets_ativos: number;
+  vip: Pet[];
+  top_tutores: TopTutor[];
+  custos_por_categoria: CategoriaCusto[];
+}
+
+export type TipoTransacao = "atendimento" | "pacote" | "custo" | "retirada";
+
+/** Uma linha do feed de caixa. `valor` é sempre positivo: o sinal é derivado do
+ *  `tipo` na tela. Consumo de pacote não aparece aqui (invariante 1). */
+export interface Transacao {
+  tipo: TipoTransacao;
+  descricao: string;
+  valor: string;
+  /** Para custo é a competência (dia 1 sintético), não uma data real de pagamento. */
+  data: string;
 }
 
 export interface PagamentoEntrada {

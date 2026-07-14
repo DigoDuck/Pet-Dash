@@ -1,6 +1,13 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { request } from "../lib/api";
 import type { Atendimento, AtendimentoEntrada, Paginated } from "../lib/types";
+import { invalidarDashboard } from "./useDashboard";
 
 export interface FiltrosAtendimento {
   data: string;
@@ -46,12 +53,20 @@ export function useAtendimento(id: number) {
   });
 }
 
+// Um atendimento avulso Liberado É faturamento. Sem invalidar o dashboard, liberar
+// um atendimento de R$ 95 atualiza a lista e deixa o faturamento, o gráfico e o feed
+// no valor velho até um F5 — a tela contradiz a si mesma sem levantar erro nenhum.
+function invalidarAtendimentos(client: QueryClient) {
+  client.invalidateQueries({ queryKey: chavesAtendimentos.raiz });
+  invalidarDashboard(client);
+}
+
 export function useCriarAtendimento() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (dados: AtendimentoEntrada) =>
       request<Atendimento>("/atendimentos/", { method: "POST", body: JSON.stringify(dados) }),
-    onSuccess: () => client.invalidateQueries({ queryKey: chavesAtendimentos.raiz }),
+    onSuccess: () => invalidarAtendimentos(client),
   });
 }
 
@@ -60,6 +75,6 @@ export function useAtualizarAtendimento(id: number) {
   return useMutation({
     mutationFn: (dados: Partial<AtendimentoEntrada>) =>
       request<Atendimento>(`/atendimentos/${id}/`, { method: "PATCH", body: JSON.stringify(dados) }),
-    onSuccess: () => client.invalidateQueries({ queryKey: chavesAtendimentos.raiz }),
+    onSuccess: () => invalidarAtendimentos(client),
   });
 }

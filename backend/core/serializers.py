@@ -121,6 +121,34 @@ class TopTutorSerializer(serializers.ModelSerializer):
         fields = ["id", "nome", "gasto_total"]
 
 
+class CategoriaCustoSerializer(serializers.Serializer):
+    categoria = serializers.CharField()
+    valor = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class TransacaoSerializer(serializers.Serializer):
+    """`valor` é sempre positivo; o sinal (+/−) é derivado do `tipo` na tela.
+
+    Guardar o sinal aqui exigiria negar o Decimal e abrir espaço para alguém somar
+    o feed e achar que tem um total — o que seria agregação financeira fora da query
+    (invariante 9).
+    """
+
+    tipo = serializers.ChoiceField(choices=["atendimento", "pacote", "custo", "retirada"])
+    descricao = serializers.CharField()
+    valor = serializers.DecimalField(max_digits=10, decimal_places=2)
+    data = serializers.DateField()
+
+
+class PontoSerieSerializer(serializers.Serializer):
+    """Um mês do gráfico. `competencia` é sempre o dia 1."""
+
+    competencia = serializers.DateField()
+    faturamento = serializers.DecimalField(max_digits=10, decimal_places=2)
+    custos = serializers.DecimalField(max_digits=10, decimal_places=2)
+    lucro = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
 class DashboardSerializer(serializers.Serializer):
     # Todos os valores monetários saem como string ("315.00"), padrão DRF,
     # para o front não receber float e string misturados na mesma resposta.
@@ -130,6 +158,10 @@ class DashboardSerializer(serializers.Serializer):
     lucro = serializers.DecimalField(max_digits=10, decimal_places=2)
     ticket_medio = serializers.DecimalField(max_digits=10, decimal_places=2)
     margem = serializers.DecimalField(max_digits=6, decimal_places=4)
+    # Visitas Liberadas (inclui consumo de pacote) — não confundir com o denominador
+    # do ticket médio, que conta eventos de receita. Ver dashboard_periodo.
+    qtd_atendimentos = serializers.IntegerField()
+    pets_ativos = serializers.IntegerField()
 
 
 class AtendimentoSerializer(serializers.ModelSerializer):

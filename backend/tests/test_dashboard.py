@@ -5,7 +5,7 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from core.services import dashboard_periodo, pets_vip, top_tutores
+from core.services import custos_por_categoria, dashboard_periodo, pets_vip, top_tutores
 from tests.factories import (
     AtendimentoFactory,
     CustoFactory,
@@ -228,3 +228,70 @@ def test_dashboard_marca_pets_vip_como_vip(api):
     resp = api.get("/api/dashboard/?inicio=2026-06-01&fim=2026-06-30")
 
     assert resp.json()["vip"][0]["vip"] is True
+
+
+def test_custos_por_categoria_soma_e_ordena_desc():
+    CustoFactory(categoria="Insumos", valor=Decimal("300.00"), competencia=date(2026, 6, 1))
+    CustoFactory(categoria="Insumos", valor=Decimal("200.00"), competencia=date(2026, 6, 1))
+    CustoFactory(categoria="Aluguel", valor=Decimal("900.00"), competencia=date(2026, 6, 1))
+
+    resultado = custos_por_categoria(date(2026, 6, 1), date(2026, 6, 30))
+
+    assert [(linha["categoria"], linha["valor"]) for linha in resultado] == [
+        ("Aluguel", Decimal("900.00")),
+        ("Insumos", Decimal("500.00")),
+    ]
+
+
+def test_custos_por_categoria_funde_variacoes_de_digitacao():
+    """`categoria` é texto livre: "Aluguel", "aluguel" e "Aluguel " são o mesmo custo.
+
+    Sem a chave normalizada, o gráfico mostraria três fatias do mesmo aluguel.
+    """
+    CustoFactory(categoria="Aluguel", valor=Decimal("100.00"), competencia=date(2026, 6, 1))
+    CustoFactory(categoria="aluguel", valor=Decimal("100.00"), competencia=date(2026, 6, 1))
+    CustoFactory(categoria="Aluguel ", valor=Decimal("100.00"), competencia=date(2026, 6, 1))
+
+    resultado = custos_por_categoria(date(2026, 6, 1), date(2026, 6, 30))
+
+    assert len(resultado) == 1
+    assert resultado[0]["valor"] == Decimal("300.00")
+    # O rótulo sai como a Patricia digitou (sem espaço à toa); só a chave é normalizada.
+    assert resultado[0]["categoria"].strip().lower() == "aluguel"
+
+
+def test_custos_por_categoria_rotula_vazio_como_sem_categoria():
+    CustoFactory(categoria="", valor=Decimal("50.00"), competencia=date(2026, 6, 1))
+    CustoFactory(categoria="   ", valor=Decimal("30.00"), competencia=date(2026, 6, 1))
+
+    resultado = custos_por_categoria(date(2026, 6, 1), date(2026, 6, 30))
+
+    assert resultado == [{"categoria": "Sem categoria", "valor": Decimal("80.00")}]
+
+
+def test_custos_por_categoria_agrupa_cauda_em_outros():
+    for i, valor in enumerate([600, 500, 400, 300, 200], start=1):
+        CustoFactory(
+            categoria=f"Categoria {i}", valor=Decimal(valor), competencia=date(2026, 6, 1),
+        )
+    CustoFactory(categoria="Cauda A", valor=Decimal("70.00"), competencia=date(2026, 6, 1))
+    CustoFactory(categoria="Cauda B", valor=Decimal("30.00"), competencia=date(2026, 6, 1))
+
+    resultado = custos_por_categoria(date(2026, 6, 1), date(2026, 6, 30))
+
+    assert len(resultado) == 6
+    assert resultado[-1] == {"categoria": "Outros", "valor": Decimal("100.00")}
+
+
+def test_custos_por_categoria_respeita_o_periodo():
+    CustoFactory(categoria="Aluguel", valor=Decimal("900.00"), competencia=date(2026, 5, 1))
+
+    assert custos_por_categoria(date(2026, 6, 1), date(2026, 6, 30)) == []
+
+
+def test_dashboard_endpoint_inclui_custos_por_categoria(api):
+    CustoFactory(categoria="Insumos", valor=Decimal("120.00"), competencia=date(2026, 6, 1))
+
+    body = api.get("/api/dashboard/?inicio=2026-06-01&fim=2026-06-30").json()
+
+    assert body["custos_por_categoria"] == [{"categoria": "Insumos", "valor": "120.00"}]
