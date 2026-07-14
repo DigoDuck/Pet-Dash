@@ -39,9 +39,8 @@ class PetSerializer(serializers.ModelSerializer):
         # Derivado, nunca armazenado (invariante 6). Vale tanto para o queryset
         # anotado pelo PetViewSet (janela de 365 dias) quanto para o do
         # dashboard (pets_vip, janela do período consultado).
-        return (
-            self.get_qtd_visitas(obj) >= services.VIP_MIN_VISITAS
-            or Decimal(self.get_total_gasto(obj)) >= services.VIP_MIN_GASTO
+        return services.eh_vip(
+            self.get_qtd_visitas(obj), Decimal(self.get_total_gasto(obj))
         )
 
 
@@ -175,14 +174,23 @@ class AtendimentoSerializer(serializers.ModelSerializer):
     servico_nome = serializers.CharField(source="servico.nome", read_only=True)
     pet_nome = serializers.CharField(source="pet.nome", read_only=True)
     tutor_nome = serializers.CharField(source="pet.tutor.nome", read_only=True)
+    # Anotado por subquery no ViewSet. No POST o objeto não passa pelo get_queryset()
+    # anotado, então cai em False — a tela de criação não mostra badge, e não precisa.
+    pet_vip = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Atendimento
         fields = [
-            "id", "pet", "pet_nome", "tutor_nome", "servico", "servico_nome",
+            "id", "pet", "pet_nome", "tutor_nome", "pet_vip", "servico", "servico_nome",
             "pacote", "data", "horario", "valor", "transporte", "transporte_valor",
             "manejo_especial", "status", "pagamentos",
         ]
+
+    def get_pet_vip(self, obj) -> bool:
+        return services.eh_vip(
+            getattr(obj, "pet_visitas", 0) or 0,
+            getattr(obj, "pet_gasto", None) or Decimal("0"),
+        )
 
     def create(self, validated_data):
         pagamentos = validated_data.pop("pagamentos", [])

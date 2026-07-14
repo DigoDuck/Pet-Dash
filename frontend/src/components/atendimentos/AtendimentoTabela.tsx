@@ -39,7 +39,14 @@ export function AtendimentoTabela({ atendimentos }: { atendimentos: Atendimento[
                     {a.pet_nome.charAt(0).toUpperCase()}
                   </span>
                   <div>
-                    <div className="font-medium text-escuro">{a.pet_nome}</div>
+                    <div className="flex items-center gap-1.5 font-medium text-escuro">
+                      {a.pet_nome}
+                      {a.pet_vip && (
+                        <Badge variant="vip" className="px-1.5 py-px text-[9px] tracking-wider uppercase">
+                          VIP
+                        </Badge>
+                      )}
+                    </div>
                     <div className="text-xs text-neutro">{a.tutor_nome}</div>
                   </div>
                 </div>

@@ -45,6 +45,9 @@ export interface Atendimento {
   servico_nome: string;
   pet_nome: string;
   tutor_nome: string;
+  /** VIP do pet (invariante 6), anotado por subquery no ViewSet. Falso na resposta do
+   *  POST, que não passa pelo queryset anotado. */
+  pet_vip: boolean;
   /** Não-nulo significa consumo de crédito de pacote (invariante 2). */
   pacote: number | null;
   data: string;

@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AtendimentoTabela } from "../components/atendimentos/AtendimentoTabela";
 import { ErroAoCarregar } from "../components/ErroAoCarregar";
 import { Button } from "../components/ui/Button";
 import { useAgenda } from "../hooks/useAtendimentos";
@@ -46,6 +47,12 @@ export function Agenda() {
   const horas = faixaDeHoras(atendimentos);
   const hoje = hojeISO();
 
+  // A tabela é a mesma dos Atendimentos, filtrada para o que ainda vai acontecer.
+  // Cancelado fica de fora: não é um próximo atendimento, é um que não vai existir.
+  const proximos = atendimentos
+    .filter((a) => a.data >= hoje && a.status !== "Cancelado")
+    .sort((a, b) => `${a.data}${a.horario}`.localeCompare(`${b.data}${b.horario}`));
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -87,7 +94,7 @@ export function Agenda() {
       ) : (
         <div className="mt-6 overflow-x-auto rounded-xl border border-neutro-light/60 bg-creme">
           <div
-            className="grid min-w-[720px]"
+            className="grid min-w-180"
             style={{ gridTemplateColumns: `56px repeat(${DIAS}, minmax(0, 1fr))` }}
           >
             <div className="border-r border-b border-neutro-light/60" />
@@ -132,7 +139,7 @@ export function Agenda() {
               <div
                 key={dia}
                 className={`relative border-r border-neutro-light/60 last:border-r-0 ${
-                  dia === hoje ? "bg-marsala/[0.03]" : ""
+                  dia === hoje ? "bg-marsala/3" : ""
                 }`}
               >
                 {horas.map((h) => (
@@ -159,7 +166,14 @@ export function Agenda() {
                       }}
                       className={`absolute right-1 left-1 overflow-hidden rounded-lg px-2 py-1.5 text-[11px] leading-tight shadow-sm ${CORES[a.status]}`}
                     >
-                      <span className="block truncate font-semibold">{a.pet_nome}</span>
+                      <span className="flex items-center gap-1 truncate font-semibold">
+                        {a.pet_nome}
+                        {a.pet_vip && (
+                          <span className="rounded-sm bg-ouro px-1 py-px text-[9px] font-bold tracking-wider text-escuro uppercase">
+                            VIP
+                          </span>
+                        )}
+                      </span>
                       <span className="block truncate opacity-80">{a.servico_nome}</span>
                       <span className="block font-mono opacity-75">{a.horario.slice(0, 5)}</span>
                     </Link>
@@ -172,6 +186,26 @@ export function Agenda() {
 
       {!isPending && !isError && atendimentos.length === 0 && (
         <p className="mt-4 text-center text-sm text-neutro">Nenhum atendimento nesta semana.</p>
+      )}
+
+      {proximos.length > 0 && (
+        <div className="mt-10">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h2 className="font-display text-xl text-escuro">Próximos atendimentos</h2>
+              <p className="mt-1 text-xs text-neutro">Desta semana, de hoje em diante</p>
+            </div>
+            <Link
+              to="/atendimentos"
+              className="text-sm font-semibold text-marsala hover:underline"
+            >
+              Ver todos →
+            </Link>
+          </div>
+          <div className="mt-4">
+            <AtendimentoTabela atendimentos={proximos} />
+          </div>
+        </div>
       )}
     </div>
   );

@@ -58,7 +58,9 @@ export function useAgenda(inicio: string, fim: string) {
     queryKey: ["atendimentos", "agenda", inicio, fim] as const,
     queryFn: () =>
       request<Paginated<Atendimento>>(
-        `/atendimentos/?data__gte=${inicio}&data__lte=${fim}&ordering=horario`,
+        // ordering=data,horario e não só horario: ordenar só pela hora embaralha os dias
+        // entre si, e a tabela de próximos atendimentos sairia fora de ordem.
+        `/atendimentos/?data__gte=${inicio}&data__lte=${fim}&ordering=data,horario`,
       ),
     placeholderData: keepPreviousData,
   });

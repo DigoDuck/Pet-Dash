@@ -171,8 +171,9 @@ class AtendimentoViewSet(viewsets.ModelViewSet):
     ordering_fields = ["data", "horario"]
 
     def get_queryset(self):
-        return (
+        qs = (
             models.Atendimento.objects.select_related("pet__tutor", "servico", "pacote")
             .prefetch_related("pagamentos")
             .order_by("-data", "-horario")
         )
+        return services.anota_vip_do_pet(qs, date.today())
