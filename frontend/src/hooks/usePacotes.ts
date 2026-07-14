@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import type { QueryClient } from "@tanstack/react-query";
 import { request } from "../lib/api";
 import type { Pacote, PacoteEntrada, Paginated } from "../lib/types";
+import { invalidarDashboard } from "./useDashboard";
 
 export const chavesPacotes = {
   raiz: ["pacotes"] as const,
@@ -9,12 +10,15 @@ export const chavesPacotes = {
     ["pacotes", "lista", competencia, busca, pagina] as const,
 };
 
-// Invalida a lista E o pacote-ativo. Sem a segunda chave, o AtendimentoForm
-// serviria cache velho logo após a venda, o atendimento nasceria avulso e o
-// dinheiro do pacote entraria duas vezes no faturamento (invariantes 1 e 2).
+// Invalida a lista, o pacote-ativo E o dashboard. Sem a segunda chave, o
+// AtendimentoForm serviria cache velho logo após a venda, o atendimento nasceria
+// avulso e o dinheiro do pacote entraria duas vezes no faturamento (invariantes 1 e
+// 2). Sem a terceira, a venda (que É faturamento, pelo regime de caixa) não aparece
+// nos KPIs nem no feed até um F5.
 function invalidarPacotes(client: QueryClient) {
   client.invalidateQueries({ queryKey: chavesPacotes.raiz });
   client.invalidateQueries({ queryKey: ["pacote-ativo"] });
+  invalidarDashboard(client);
 }
 
 export function usePacotes(competencia: string, busca: string, pagina: number) {
