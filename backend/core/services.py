@@ -1,7 +1,19 @@
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Case, Count, DecimalField, F, Min, Q, Sum, Value, When
+from django.db.models import (
+    Case,
+    Count,
+    DecimalField,
+    F,
+    Min,
+    OuterRef,
+    Q,
+    Subquery,
+    Sum,
+    Value,
+    When,
+)
 from django.db.models.functions import Coalesce, Lower, Trim
 
 from core.models import Atendimento, Custo, PacoteContratado, Pet, Retirada, Tutor
@@ -294,6 +306,40 @@ def pets_vip(inicio, fim):
         )
         .filter(Q(qtd_visitas__gte=3) | Q(total_gasto__gte=500))
         .distinct()
+    )
+
+
+def eh_vip(qtd_visitas, total_gasto):
+    """A regra da invariante 6, num lugar só: 3+ visitas OU R$ 500+ gastos.
+
+    Vive aqui, e não no serializer, porque agora dois serializers a aplicam (o do Pet e
+    o do Atendimento) — e uma regra de negócio duplicada diverge no dia em que o critério
+    da Patricia mudar.
+    """
+    return qtd_visitas >= VIP_MIN_VISITAS or (total_gasto or Decimal("0")) >= VIP_MIN_GASTO
+
+
+def anota_vip_do_pet(queryset, hoje):
+    """Anota, num queryset de ATENDIMENTO, as visitas e o gasto do pet na janela VIP.
+
+    Subquery e não SerializerMethodField: a agenda lista uma semana inteira (~33 linhas)
+    e cada linha faria dois COUNT/SUM próprios. Aqui é uma query só, seja qual for o
+    tamanho da lista.
+    """
+    desde = hoje - timedelta(days=VIP_JANELA_DIAS)
+    do_pet = (
+        Atendimento.objects.filter(
+            pet=OuterRef("pet"),
+            status=Atendimento.Status.LIBERADO,
+            data__gte=desde,
+            data__lte=hoje,
+        )
+        .values("pet")
+        .annotate(visitas=Count("id"), gasto=Sum("valor"))
+    )
+    return queryset.annotate(
+        pet_visitas=Subquery(do_pet.values("visitas")[:1]),
+        pet_gasto=Subquery(do_pet.values("gasto")[:1]),
     )
 
 

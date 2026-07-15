@@ -32,6 +32,42 @@ export function formatarData(iso: string): string {
   return `${dia}/${mes}/${ano}`;
 }
 
+/** A segunda-feira da semana de `iso`. Domingo pertence à semana que termina nele.
+ *
+ *  Em UTC: `new Date("2026-07-08")` já é UTC, e misturar com getDay() local retrocede
+ *  um dia à noite em -03 — a semana inteira sairia deslocada. */
+export function inicioDaSemana(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const diaDaSemana = d.getUTCDay(); // 0 = domingo
+  const recuo = diaDaSemana === 0 ? 6 : diaDaSemana - 1;
+  d.setUTCDate(d.getUTCDate() - recuo);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Os `n` dias a partir de `iso`, em ISO. Agenda usa 6 (segunda a sábado). */
+export function diasDaSemana(iso: string, n = 6): string[] {
+  const base = new Date(`${iso}T00:00:00Z`);
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(base);
+    d.setUTCDate(d.getUTCDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
+}
+
+/** "2026-07-08" + 7 -> "2026-07-15". Negativo anda para trás. */
+export function somarDias(iso: string, dias: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+const DIAS_CURTOS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+/** "2026-07-08" -> "Qua". */
+export function diaCurto(iso: string): string {
+  return DIAS_CURTOS[new Date(`${iso}T00:00:00Z`).getUTCDay()];
+}
+
 const MESES_CURTOS = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",

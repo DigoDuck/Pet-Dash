@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
@@ -131,3 +133,24 @@ def test_lista_atendimentos_sem_n_mais_1(api, django_assert_max_num_queries):
     # numa query só). Sem o select_related do tutor, seriam ~5 queries extras.
     with django_assert_max_num_queries(6):
         api.get("/api/atendimentos/")
+
+
+def test_filtra_atendimentos_por_intervalo_de_datas(api):
+    """A agenda pede uma semana. Sem os lookups gte/lte, o django-filter ignoraria os
+    parâmetros em silêncio e a grade mostraria o histórico inteiro."""
+    AtendimentoFactory(data=date(2026, 7, 6), status="Liberado")
+    AtendimentoFactory(data=date(2026, 7, 10), status="Pendente")
+    AtendimentoFactory(data=date(2026, 7, 13), status="Pendente")  # semana seguinte
+
+    resp = api.get("/api/atendimentos/?data__gte=2026-07-06&data__lte=2026-07-10")
+
+    assert resp.status_code == 200
+    assert resp.data["count"] == 2
+
+
+def test_filtro_de_dia_exato_continua_funcionando(api):
+    """Guarda de regressão: a lista de atendimentos filtra por ?data=<dia>."""
+    AtendimentoFactory(data=date(2026, 7, 6))
+    AtendimentoFactory(data=date(2026, 7, 7))
+
+    assert api.get("/api/atendimentos/?data=2026-07-06").data["count"] == 1

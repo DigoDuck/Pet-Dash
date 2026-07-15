@@ -45,6 +45,27 @@ export function useAtendimentos(filtros: FiltrosAtendimento) {
   });
 }
 
+/** Os atendimentos de um intervalo, para a agenda.
+ *
+ *  Chave sob a raiz `["atendimentos"]` de propósito: as mutações já invalidam essa raiz,
+ *  então liberar ou cancelar um atendimento atualiza a grade de graça.
+ *
+ *  ponytail: sem paginação — a página vem com 50 e uma semana tem ~33 atendimentos
+ *  (130/mês). Se uma semana passar de 50, a grade perde o excedente em silêncio; aí
+ *  paginar aqui ou subir o PAGE_SIZE só desta rota. */
+export function useAgenda(inicio: string, fim: string) {
+  return useQuery({
+    queryKey: ["atendimentos", "agenda", inicio, fim] as const,
+    queryFn: () =>
+      request<Paginated<Atendimento>>(
+        // ordering=data,horario e não só horario: ordenar só pela hora embaralha os dias
+        // entre si, e a tabela de próximos atendimentos sairia fora de ordem.
+        `/atendimentos/?data__gte=${inicio}&data__lte=${fim}&ordering=data,horario`,
+      ),
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useAtendimento(id: number) {
   return useQuery({
     queryKey: chavesAtendimentos.detalhe(id),

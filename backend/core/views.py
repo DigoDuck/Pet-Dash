@@ -159,12 +159,21 @@ class SerieMensalView(APIView):
 
 class AtendimentoViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.AtendimentoSerializer
-    filterset_fields = ["status", "pet", "data", "pacote"]
+    # `gte`/`lte` em `data` para a agenda pedir uma semana. O `exact` fica: o filtro do
+    # dia na lista de atendimentos depende dele, e um lookup não declarado é ignorado em
+    # silêncio pelo django-filter (?data=<dia> passaria a devolver tudo).
+    filterset_fields = {
+        "data": ["exact", "gte", "lte"],
+        "status": ["exact"],
+        "pet": ["exact"],
+        "pacote": ["exact"],
+    }
     ordering_fields = ["data", "horario"]
 
     def get_queryset(self):
-        return (
+        qs = (
             models.Atendimento.objects.select_related("pet__tutor", "servico", "pacote")
             .prefetch_related("pagamentos")
             .order_by("-data", "-horario")
         )
+        return services.anota_vip_do_pet(qs, date.today())

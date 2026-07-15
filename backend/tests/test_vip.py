@@ -2,10 +2,20 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
+from django.contrib.auth.models import User
+from rest_framework.test import APIClient
 
 from core.models import Pet
 from core.services import anota_vip
 from tests.factories import AtendimentoFactory, PetFactory
+
+
+@pytest.fixture
+def api():
+    user = User.objects.create_user(username="p", password="x")
+    client = APIClient()
+    client.force_authenticate(user=user)
+    return client
 
 pytestmark = pytest.mark.django_db
 
@@ -84,3 +94,30 @@ def test_nao_multiplica_soma_com_varios_atendimentos():
 
     assert anotado(pet).qtd_visitas == 4
     assert anotado(pet).total_gasto == Decimal("100.00")
+
+
+def test_atendimento_traz_o_vip_do_pet(api):
+    """O badge dourado da agenda. Anotado por subquery: uma query, não uma por linha.
+
+    As datas são relativas a hoje de propósito: a janela do VIP é `hoje - 365 dias` até
+    HOJE, então um atendimento marcado para a semana que vem não conta como visita (e não
+    deve mesmo — ele ainda não aconteceu).
+    """
+    hoje = date.today()
+    pet = PetFactory()
+    for dias_atras in (1, 10, 20):
+        AtendimentoFactory(
+            pet=pet, status="Liberado", valor=Decimal("50.00"),
+            data=hoje - timedelta(days=dias_atras),
+        )
+
+    comum = PetFactory()
+    AtendimentoFactory(
+        pet=comum, status="Liberado", valor=Decimal("50.00"), data=hoje - timedelta(days=1)
+    )
+
+    resp = api.get("/api/atendimentos/")
+
+    por_pet = {a["pet"]: a["pet_vip"] for a in resp.data["results"]}
+    assert por_pet[pet.id] is True
+    assert por_pet[comum.id] is False

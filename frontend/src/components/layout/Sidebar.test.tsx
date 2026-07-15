@@ -11,10 +11,11 @@ function renderSidebar(rota: string) {
 }
 
 describe("Sidebar", () => {
-  it("lista só os 6 itens do MVP", () => {
+  it("lista os 7 itens do app", () => {
     renderSidebar("/");
     for (const label of [
       "Painel financeiro",
+      "Agenda",
       "Atendimentos",
       "Clientes & Pets",
       "Serviços",
@@ -23,12 +24,14 @@ describe("Sidebar", () => {
     ]) {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     }
-    expect(screen.getAllByRole("link")).toHaveLength(6);
+    expect(screen.getAllByRole("link")).toHaveLength(7);
   });
 
-  it("não mostra os itens fora do MVP que existem no protótipo", () => {
+  // A Agenda saiu do backlog a pedido da Patricia (jul/2026). Relatórios e Configurações
+  // continuam no protótipo e fora do escopo.
+  it("não mostra os itens fora de escopo que existem no protótipo", () => {
     renderSidebar("/");
-    for (const fora of ["Agenda", "Relatórios", "Configurações"]) {
+    for (const fora of ["Relatórios", "Configurações"]) {
       expect(screen.queryByRole("link", { name: fora })).not.toBeInTheDocument();
     }
   });
