@@ -2,20 +2,10 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
-from django.contrib.auth.models import User
-from rest_framework.test import APIClient
 
 from core.models import Pet
 from core.services import anota_vip
 from tests.factories import AtendimentoFactory, PetFactory
-
-
-@pytest.fixture
-def api():
-    user = User.objects.create_user(username="p", password="x")
-    client = APIClient()
-    client.force_authenticate(user=user)
-    return client
 
 pytestmark = pytest.mark.django_db
 
@@ -121,3 +111,23 @@ def test_atendimento_traz_o_vip_do_pet(api):
     por_pet = {a["pet"]: a["pet_vip"] for a in resp.data["results"]}
     assert por_pet[pet.id] is True
     assert por_pet[comum.id] is False
+
+
+def test_patch_que_cruza_o_limiar_vip_responde_com_pet_vip_fresco(api):
+    """A anotação vem do get_object() de ANTES do save: sem re-anotar, o PATCH que
+    libera a 3ª visita responderia pet_vip=False enquanto o GET seguinte diria True."""
+    hoje = date.today()
+    pet = PetFactory()
+    for dias_atras in (1, 10):
+        AtendimentoFactory(
+            pet=pet, status="Liberado", valor=Decimal("50.00"),
+            data=hoje - timedelta(days=dias_atras),
+        )
+    terceiro = AtendimentoFactory(
+        pet=pet, status="Pendente", valor=Decimal("50.00"), data=hoje
+    )
+
+    resp = api.patch(f"/api/atendimentos/{terceiro.id}/", {"status": "Liberado"})
+
+    assert resp.status_code == 200
+    assert resp.data["pet_vip"] is True
