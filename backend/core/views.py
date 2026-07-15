@@ -177,3 +177,18 @@ class AtendimentoViewSet(viewsets.ModelViewSet):
             .order_by("-data", "-horario")
         )
         return services.anota_vip_do_pet(qs, date.today())
+
+    # O objeto salvo não passa pelo get_queryset() anotado (POST) ou carrega a
+    # anotação de ANTES do save (PATCH que muda status podia cruzar o limiar VIP
+    # e responder com o valor velho). Re-buscar do queryset anotado deixa a
+    # resposta de escrita igual à do GET seguinte.
+    def _reanota(self, serializer):
+        serializer.instance = self.get_queryset().get(pk=serializer.instance.pk)
+
+    def perform_create(self, serializer):
+        serializer.save()
+        self._reanota(serializer)
+
+    def perform_update(self, serializer):
+        serializer.save()
+        self._reanota(serializer)

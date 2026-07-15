@@ -304,7 +304,7 @@ def pets_vip(inicio, fim):
             qtd_visitas=Count("atendimentos"),
             total_gasto=Sum("atendimentos__valor"),
         )
-        .filter(Q(qtd_visitas__gte=3) | Q(total_gasto__gte=500))
+        .filter(Q(qtd_visitas__gte=VIP_MIN_VISITAS) | Q(total_gasto__gte=VIP_MIN_GASTO))
         .distinct()
     )
 
@@ -319,6 +319,21 @@ def eh_vip(qtd_visitas, total_gasto):
     return qtd_visitas >= VIP_MIN_VISITAS or (total_gasto or Decimal("0")) >= VIP_MIN_GASTO
 
 
+def _janela_vip(hoje, prefixo=""):
+    """O que conta como visita VIP, num lugar só: Liberado, nos 365 dias até `hoje`.
+
+    `prefixo` adapta o mesmo filtro ao model consultado: vazio num queryset de
+    Atendimento, "atendimentos__" num de Pet. Duas cópias da janela divergiriam em
+    silêncio no dia em que o critério mudar — o badge da agenda diria uma coisa e a
+    lista de clientes outra, para o mesmo pet.
+    """
+    return Q(**{
+        f"{prefixo}status": Atendimento.Status.LIBERADO,
+        f"{prefixo}data__gte": hoje - timedelta(days=VIP_JANELA_DIAS),
+        f"{prefixo}data__lte": hoje,
+    })
+
+
 def anota_vip_do_pet(queryset, hoje):
     """Anota, num queryset de ATENDIMENTO, as visitas e o gasto do pet na janela VIP.
 
@@ -326,14 +341,8 @@ def anota_vip_do_pet(queryset, hoje):
     e cada linha faria dois COUNT/SUM próprios. Aqui é uma query só, seja qual for o
     tamanho da lista.
     """
-    desde = hoje - timedelta(days=VIP_JANELA_DIAS)
     do_pet = (
-        Atendimento.objects.filter(
-            pet=OuterRef("pet"),
-            status=Atendimento.Status.LIBERADO,
-            data__gte=desde,
-            data__lte=hoje,
-        )
+        Atendimento.objects.filter(_janela_vip(hoje), pet=OuterRef("pet"))
         .values("pet")
         .annotate(visitas=Count("id"), gasto=Sum("valor"))
     )
@@ -360,11 +369,7 @@ def anota_vip(queryset, hoje):
 
     `hoje` é parâmetro, não `date.today()`, para o teste ser determinístico.
     """
-    na_janela = Q(
-        atendimentos__status=Atendimento.Status.LIBERADO,
-        atendimentos__data__gte=hoje - timedelta(days=VIP_JANELA_DIAS),
-        atendimentos__data__lte=hoje,
-    )
+    na_janela = _janela_vip(hoje, prefixo="atendimentos__")
     return queryset.annotate(
         qtd_visitas=Count("atendimentos", filter=na_janela),
         total_gasto=Coalesce(

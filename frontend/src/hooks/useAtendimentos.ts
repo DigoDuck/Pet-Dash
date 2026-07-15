@@ -21,6 +21,7 @@ export const chavesAtendimentos = {
   doPet: (petId: number, pagina: number) => ["atendimentos", "doPet", petId, pagina] as const,
   lista: (f: FiltrosAtendimento) =>
     ["atendimentos", "lista", f.data, f.status, f.pet, f.pagina] as const,
+  agenda: (inicio: string, fim: string) => ["atendimentos", "agenda", inicio, fim] as const,
   detalhe: (id: number) => ["atendimentos", "detalhe", id] as const,
 };
 
@@ -47,15 +48,15 @@ export function useAtendimentos(filtros: FiltrosAtendimento) {
 
 /** Os atendimentos de um intervalo, para a agenda.
  *
- *  Chave sob a raiz `["atendimentos"]` de propósito: as mutações já invalidam essa raiz,
+ *  Chave na factory, sob a raiz `["atendimentos"]`: as mutações já invalidam essa raiz,
  *  então liberar ou cancelar um atendimento atualiza a grade de graça.
  *
  *  ponytail: sem paginação — a página vem com 50 e uma semana tem ~33 atendimentos
- *  (130/mês). Se uma semana passar de 50, a grade perde o excedente em silêncio; aí
- *  paginar aqui ou subir o PAGE_SIZE só desta rota. */
+ *  (130/mês). Se passar de 50, a Agenda avisa comparando `count` com o que veio
+ *  (o excedente não é desenhado); aí paginar aqui de verdade. */
 export function useAgenda(inicio: string, fim: string) {
   return useQuery({
-    queryKey: ["atendimentos", "agenda", inicio, fim] as const,
+    queryKey: chavesAtendimentos.agenda(inicio, fim),
     queryFn: () =>
       request<Paginated<Atendimento>>(
         // ordering=data,horario e não só horario: ordenar só pela hora embaralha os dias

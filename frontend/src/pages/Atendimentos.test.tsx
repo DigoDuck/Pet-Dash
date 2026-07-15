@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { atendimento } from "../test/fixtures";
 import { renderizarComProvedores } from "../test/utils";
 import { server } from "../test/msw/server";
 import { Atendimentos } from "./Atendimentos";
@@ -9,14 +10,6 @@ import { Atendimentos } from "./Atendimentos";
 const BASE = "http://localhost:8000/api";
 
 afterEach(() => vi.unstubAllGlobals());
-
-function atendimento(over: Record<string, unknown> = {}) {
-  return {
-    id: 1, pet: 7, pet_nome: "Luna", tutor_nome: "Ana Clara", servico: 1, servico_nome: "Banho",
-    pacote: null, data: "2026-07-08", horario: "10:00:00", valor: "60.00",
-    transporte: false, transporte_valor: "0.00", status: "Pendente", pagamentos: [], ...over,
-  };
-}
 
 function paginado(results: unknown[]) {
   return { count: results.length, next: null, previous: null, results };

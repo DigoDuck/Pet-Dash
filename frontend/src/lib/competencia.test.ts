@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  diasDaSemana,
   formatarData,
   hojeISO,
   inicioDaCompetencia,
+  inicioDaSemana,
   mesCorrente,
   mesCurto,
   mesDaCompetencia,
   mesesAnteriores,
+  somarDias,
   ultimoDiaDoMes,
 } from "./competencia";
 
@@ -66,5 +69,44 @@ describe("mesCurto", () => {
   it("rotula a competência com o mês abreviado", () => {
     expect(mesCurto("2026-01-01")).toBe("Jan");
     expect(mesCurto("2026-12-01")).toBe("Dez");
+  });
+});
+
+describe("inicioDaSemana", () => {
+  // A semana do spa é terça a domingo; a folga é a segunda.
+  it("recua até a terça-feira da semana", () => {
+    expect(inicioDaSemana("2026-07-15")).toBe("2026-07-14"); // quarta
+    expect(inicioDaSemana("2026-07-14")).toBe("2026-07-14"); // a própria terça
+    expect(inicioDaSemana("2026-07-18")).toBe("2026-07-14"); // sábado
+  });
+
+  it("domingo fecha a semana que começou na terça anterior", () => {
+    expect(inicioDaSemana("2026-07-19")).toBe("2026-07-14");
+  });
+
+  it("na segunda de folga adianta para a semana que começa amanhã", () => {
+    expect(inicioDaSemana("2026-07-20")).toBe("2026-07-21");
+  });
+
+  it("atravessa a virada de mês", () => {
+    expect(inicioDaSemana("2026-08-01")).toBe("2026-07-28"); // sábado 01/08
+  });
+});
+
+describe("dias da semana", () => {
+  it("enumera os N dias a partir do início", () => {
+    expect(diasDaSemana("2026-07-14", 6)).toEqual([
+      "2026-07-14",
+      "2026-07-15",
+      "2026-07-16",
+      "2026-07-17",
+      "2026-07-18",
+      "2026-07-19",
+    ]);
+  });
+
+  it("soma e subtrai dias atravessando o mês", () => {
+    expect(somarDias("2026-07-28", 7)).toBe("2026-08-04");
+    expect(somarDias("2026-08-04", -7)).toBe("2026-07-28");
   });
 });

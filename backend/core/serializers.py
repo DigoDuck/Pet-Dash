@@ -174,8 +174,9 @@ class AtendimentoSerializer(serializers.ModelSerializer):
     servico_nome = serializers.CharField(source="servico.nome", read_only=True)
     pet_nome = serializers.CharField(source="pet.nome", read_only=True)
     tutor_nome = serializers.CharField(source="pet.tutor.nome", read_only=True)
-    # Anotado por subquery no ViewSet. No POST o objeto não passa pelo get_queryset()
-    # anotado, então cai em False — a tela de criação não mostra badge, e não precisa.
+    # Anotado por subquery no ViewSet. Nas respostas de escrita o ViewSet re-busca o
+    # objeto no queryset anotado (ver AtendimentoViewSet._reanota), então POST e PATCH
+    # saem com o mesmo pet_vip que um GET devolveria.
     pet_vip = serializers.SerializerMethodField()
 
     class Meta:

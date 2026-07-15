@@ -1,18 +1,8 @@
 import pytest
-from django.contrib.auth.models import User
-from rest_framework.test import APIClient
 
 from tests.factories import CustoFactory, RetiradaFactory
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture
-def api():
-    user = User.objects.create_user(username="patricia", password="x")
-    client = APIClient()
-    client.force_authenticate(user=user)
-    return client
 
 
 def test_cria_custo_por_competencia(api):

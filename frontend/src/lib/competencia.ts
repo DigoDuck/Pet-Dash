@@ -32,14 +32,17 @@ export function formatarData(iso: string): string {
   return `${dia}/${mes}/${ano}`;
 }
 
-/** A segunda-feira da semana de `iso`. Domingo pertence à semana que termina nele.
+/** A terça-feira da semana exibida para `iso`. A semana do spa vai de terça a
+ *  domingo — a folga é a segunda. Na segunda, adianta para a semana que COMEÇA
+ *  amanhã: mostrar a que terminou ontem deixaria a agenda presa no passado
+ *  justamente no dia de planejar a próxima.
  *
  *  Em UTC: `new Date("2026-07-08")` já é UTC, e misturar com getDay() local retrocede
  *  um dia à noite em -03 — a semana inteira sairia deslocada. */
 export function inicioDaSemana(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
   const diaDaSemana = d.getUTCDay(); // 0 = domingo
-  const recuo = diaDaSemana === 0 ? 6 : diaDaSemana - 1;
+  const recuo = diaDaSemana === 1 ? -1 : (diaDaSemana + 5) % 7;
   d.setUTCDate(d.getUTCDate() - recuo);
   return d.toISOString().slice(0, 10);
 }

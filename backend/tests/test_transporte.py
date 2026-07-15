@@ -14,8 +14,6 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-from django.contrib.auth.models import User
-from rest_framework.test import APIClient
 
 from core.services import dashboard_periodo, faturamento_periodo, transacoes_recentes
 from tests.factories import (
@@ -26,14 +24,6 @@ from tests.factories import (
 )
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture
-def api():
-    user = User.objects.create_user(username="p", password="x")
-    client = APIClient()
-    client.force_authenticate(user=user)
-    return client
 
 
 def test_faturamento_soma_o_transporte_do_avulso():

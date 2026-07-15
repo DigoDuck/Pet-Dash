@@ -2,20 +2,11 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
-from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
 from tests.factories import AtendimentoFactory, PetFactory, ServicoFactory, TutorFactory
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture
-def api():
-    user = User.objects.create_user(username="patricia", password="x")
-    client = APIClient()
-    client.force_authenticate(user=user)
-    return client
 
 
 def test_lista_tutores_exige_auth():
