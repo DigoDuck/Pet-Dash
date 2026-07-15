@@ -7,7 +7,9 @@ buildCommand = "python manage.py collectstatic --noinput"
 
 [deploy]
 preDeployCommand = "python manage.py migrate"
-startCommand = "gunicorn config.wsgi --bind 0.0.0.0:$PORT"
+# 2 workers: 1 worker sync trava a API inteira durante qualquer request lento.
+# access-logfile -: sem ele os acessos não aparecem nos logs da Railway.
+startCommand = "gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 2 --access-logfile -"
 healthcheckPath = "/api/health/"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"

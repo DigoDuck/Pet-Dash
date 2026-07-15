@@ -1,9 +1,13 @@
-Django>=5.2,<6.0
-djangorestframework>=3.16
-django-environ>=0.12
-psycopg[binary]>=3.2
-djangorestframework-simplejwt>=5.3
-django-cors-headers>=4.4
-django-filter>=24.3
-gunicorn>=23.0
-whitenoise>=6.8
+# Pins exatos das versões da venv local onde a suíte passa (sessão de deploy,
+# 15/07/2026): elimina o drift entre o ambiente testado e o build da Railway.
+# Para atualizar uma dependência: sobe a versão aqui, roda a suíte, commita.
+Django==5.2.15
+djangorestframework==3.17.1
+django-environ==0.14.0
+psycopg[binary]==3.3.4
+djangorestframework-simplejwt==5.5.1
+PyJWT==2.13.0
+django-cors-headers==4.9.0
+django-filter==25.2
+gunicorn==26.0.0
+whitenoise==6.12.0
