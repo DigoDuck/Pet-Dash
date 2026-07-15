@@ -25,14 +25,6 @@ from tests.factories import (
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def api():
-    user = User.objects.create_user(username="p", password="x")
-    client = APIClient()
-    client.force_authenticate(user=user)
-    return client
-
-
 def test_competencia_do_custo_e_normalizada_para_o_dia_1():
     """Um custo com dia 15 entrava no KPI (que usa __range) e sumia do gráfico e da
     lista (que casam o dia 1 exato) — dois números da mesma tela discordando."""

@@ -1,18 +1,8 @@
 from datetime import date
 
 import pytest
-from django.contrib.auth.models import User
-from rest_framework.test import APIClient
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture
-def api():
-    user = User.objects.create_user(username="p", password="x")
-    client = APIClient()
-    client.force_authenticate(user=user)
-    return client
 
 
 def test_vende_pacote_e_expoe_saldo(api):
