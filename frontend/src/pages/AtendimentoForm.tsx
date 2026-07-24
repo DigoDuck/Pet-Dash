@@ -156,11 +156,18 @@ export function AtendimentoForm() {
     );
     setCobrarAvulso(false); // novo pet volta ao default seguro
     setValue("pet", item?.id ?? 0);
-    setValue("manejo_especial", agressivo);
-    // `agressivo`, e NÃO o `manejoEspecial` do watch: o watch ainda carrega o valor
-    // anterior neste tick. Passar o velho deixaria o checkbox marcado com o preço sem os
-    // 40% — erro que não aparece na tela e sangra dinheiro em todo atendimento do Thor.
-    sugerirValor(servicoAtual, porte, agressivo);
+    // Os efeitos financeiros só valem na criação. Na edição, `valor` é o snapshot do que
+    // ela cobrou naquele dia (invariante 7) — reencostar no campo Pet para corrigir um
+    // vínculo errado não pode reescrever preço nem remarcar o manejo. O `sugerirValor`
+    // já vivia aqui sem gate e já apagava o valor histórico nesse caminho; o gate fecha
+    // o buraco antigo junto com o novo.
+    if (!editando) {
+      setValue("manejo_especial", agressivo);
+      // `agressivo`, e NÃO o `manejoEspecial` do watch: o watch ainda carrega o valor
+      // anterior neste tick. Passar o velho deixaria o checkbox marcado com o preço sem
+      // os 40% — erro que não aparece na tela e sangra dinheiro todo dia.
+      sugerirValor(servicoAtual, porte, agressivo);
+    }
   }
 
   function enviar(dados: AtendimentoEntrada) {

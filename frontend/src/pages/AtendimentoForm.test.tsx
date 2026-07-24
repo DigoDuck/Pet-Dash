@@ -248,6 +248,7 @@ describe("AtendimentoForm", () => {
 
     expect(await screen.findByText("Pacote Fidelidade vinculado")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adicionar pagamento" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Alertas deste pet/i)).not.toBeInTheDocument();
   });
 
   it("'cobrar como avulso' desvincula e revela os pagamentos", async () => {
@@ -295,7 +296,11 @@ describe("AtendimentoForm", () => {
   // Thor morde. Pré-marcar sem trazer os 40% junto seria pior que não pré-marcar —
   // o checkbox diria "+40%" e o valor sugerido estaria sem eles.
   it("pet cadastrado como agressivo pré-marca o manejo e já sugere com os 40%", async () => {
-    server.use(servicosComFaixas(), petsOk("P", { agressivo: true }));
+    server.use(
+      servicosComFaixas(),
+      petsOk("P", { agressivo: true }),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
 
     renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
     await screen.findByRole("option", { name: "Banho" });
@@ -311,7 +316,11 @@ describe("AtendimentoForm", () => {
   });
 
   it("otite e problema de pele avisam sem tocar no manejo nem no valor", async () => {
-    server.use(servicosComFaixas(), petsOk("P", { otite: true, problema_pele: true }));
+    server.use(
+      servicosComFaixas(),
+      petsOk("P", { otite: true, problema_pele: true }),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
 
     renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
     await screen.findByRole("option", { name: "Banho" });
@@ -346,5 +355,29 @@ describe("AtendimentoForm", () => {
     expect(screen.getByLabelText(/Manejo especial/)).not.toBeChecked();
     expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00");
     expect(screen.queryByText(/cadastrado como agressivo/i)).not.toBeInTheDocument();
+  });
+
+  // Achado 1 (revisão PR 20 Task 3): o Combobox de Pet não é desabilitado na edição, e
+  // `escolherPet` reescrevia manejo_especial e valor mesmo lá. Ela abre um atendimento
+  // antigo só para corrigir o vínculo do pet — reencostar no campo não pode remarcar o
+  // checkbox nem trazer o preço do catálogo por cima do que já foi cobrado.
+  it("reselecionar o pet na edição não marca o manejo nem reescreve o valor histórico", async () => {
+    server.use(
+      servicosComFaixas(),
+      petsOk("G", { agressivo: true }),
+      http.get(`${BASE}/atendimentos/42/`, () => HttpResponse.json(atendimentoExistente())),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarEdicao();
+
+    // Espera o registro hidratar o form e o catálogo carregar antes de reencostar no Pet.
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00"));
+    await screen.findByRole("option", { name: "Banho" });
+
+    await escolherLuna();
+
+    expect(screen.getByLabelText(/Manejo especial/)).not.toBeChecked();
+    expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00");
   });
 });
