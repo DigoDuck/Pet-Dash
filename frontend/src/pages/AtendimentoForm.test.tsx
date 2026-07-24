@@ -33,13 +33,14 @@ function servicosComFaixas() {
   );
 }
 
-function petsOk(porte = "") {
+function petsOk(porte = "", flags: Partial<Record<"agressivo" | "otite" | "problema_pele", boolean>> = {}) {
   return http.get(`${BASE}/pets/`, () =>
     HttpResponse.json({
       count: 1, next: null, previous: null,
       results: [{
         id: 7, tutor: 1, tutor_nome: "Ana Clara", nome: "Luna", raca: "", porte,
         ativo: true, created_at: "", vip: false, qtd_visitas: 0, total_gasto: "0.00",
+        agressivo: false, otite: false, problema_pele: false, ...flags,
       }],
     }),
   );
@@ -288,5 +289,62 @@ describe("AtendimentoForm", () => {
 
     expect(await screen.findByText(/sem saldo/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Adicionar pagamento" })).toBeInTheDocument();
+  });
+
+  // O flag do pet é o motivo de o PR existir: ela não pode depender de lembrar que o
+  // Thor morde. Pré-marcar sem trazer os 40% junto seria pior que não pré-marcar —
+  // o checkbox diria "+40%" e o valor sugerido estaria sem eles.
+  it("pet cadastrado como agressivo pré-marca o manejo e já sugere com os 40%", async () => {
+    server.use(servicosComFaixas(), petsOk("P", { agressivo: true }));
+
+    renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
+    await screen.findByRole("option", { name: "Banho" });
+    await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("65.00"));
+
+    await escolherLuna();
+
+    expect(await screen.findByText(/cadastrado como agressivo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Manejo especial/)).toBeChecked();
+    // 65 × 1,4 = 91. Se `sugerirValor` receber o `manejoEspecial` velho do watch, fica 65.
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("91.00"));
+  });
+
+  it("otite e problema de pele avisam sem tocar no manejo nem no valor", async () => {
+    server.use(servicosComFaixas(), petsOk("P", { otite: true, problema_pele: true }));
+
+    renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
+    await screen.findByRole("option", { name: "Banho" });
+    await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("65.00"));
+
+    await escolherLuna();
+
+    expect(await screen.findByText(/otite/i)).toBeInTheDocument();
+    expect(screen.getByText(/problema de pele/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Manejo especial/)).not.toBeChecked();
+    expect(screen.getByLabelText("Valor do serviço")).toHaveValue("65.00");
+  });
+
+  // Invariante 7 de novo, pelo caminho novo. Ela abre um atendimento antigo de pet
+  // agressivo em que cobrou sem acréscimo; pré-marcar aqui marcaria o checkbox e
+  // reescreveria o valor histórico numa ação que era só "corrigir o horário".
+  it("abrir a edição de pet agressivo não marca o manejo nem mexe no valor", async () => {
+    server.use(
+      servicosComFaixas(),
+      petsOk("G", { agressivo: true }),
+      http.get(`${BASE}/atendimentos/42/`, () => HttpResponse.json(atendimentoExistente())),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarEdicao();
+
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00"));
+    await screen.findByRole("option", { name: "Banho" });
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(screen.getByLabelText(/Manejo especial/)).not.toBeChecked();
+    expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00");
+    expect(screen.queryByText(/cadastrado como agressivo/i)).not.toBeInTheDocument();
   });
 });
