@@ -35,11 +35,20 @@ faz `search` em `nome` e `tutor__nome` e já devolve `tutor_nome`, `porte` e `vi
    são aviso puro: não marcam nada, não alteram sugestão. Manter uma única entrada no caminho do valor é
    o que faz o teste de regressão da invariante 7 continuar significando alguma coisa.
 
-3. **A pré-marcação acontece em `escolherPet`, nunca em `useEffect`.** O arquivo já documenta
+3. **A pré-marcação acontece em `escolherPet`, nunca em `useEffect`, e só na criação.** O arquivo já
+   documenta
    (`AtendimentoForm.tsx:110-117`) por que `sugerirValor` não pode viver num efeito: o `reset()` da edição
    disparava e gravava preço de catálogo por cima do valor cobrado, quebrando a invariante 7. Pré-marcar
    por efeito recria o bug idêntico — a Patricia abriria um atendimento antigo de pet agressivo só para
    corrigir o horário e sairia com `manejo_especial` marcado e o valor reescrito.
+
+   O mesmo raciocínio fecha uma segunda porta, encontrada na revisão da Task 3: o `Combobox` de Pet não
+   é desabilitado na edição, então `escolherPet` é alcançável lá. Os efeitos financeiros
+   (`setValue("manejo_especial", ...)` e `sugerirValor`) ficam atrás de `if (!editando)`. O
+   `sugerirValor` já vivia nessa função sem gate desde antes deste PR e já apagava o valor histórico
+   quando ela reencostava no campo Pet durante uma edição; o gate conserta o bug antigo junto. O
+   `setPetSelecionado` fica fora do gate — corrigir um vínculo errado continua possível, só o preço não
+   acompanha.
 
 4. **Os flags chegam ao atendimento pelo `petSelecionado`, sem request novo.** O state local já guarda
    `{id, rotulo, porte}` capturado no `escolherPet` (`AtendimentoForm.tsx:125`), e os flags já vêm no
