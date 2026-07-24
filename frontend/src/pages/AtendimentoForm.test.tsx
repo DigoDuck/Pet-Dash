@@ -413,6 +413,10 @@ describe("AtendimentoForm", () => {
 
     renderizarEdicao();
     await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00"));
+    // Espera o catálogo carregar antes de clicar: sem isto, se `listaServicos` ainda
+    // estivesse vazia, `sugerirValor` cairia no early return e o teste passaria mesmo sem
+    // o gate — travaria o comportamento errado.
+    await screen.findByRole("option", { name: "Banho" });
 
     await userEvent.click(screen.getByLabelText(/Manejo especial/));
 
