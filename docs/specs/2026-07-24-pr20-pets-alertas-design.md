@@ -50,6 +50,13 @@ faz `search` em `nome` e `tutor__nome` e já devolve `tutor_nome`, `porte` e `vi
    `setPetSelecionado` fica fora do gate — corrigir um vínculo errado continua possível, só o preço não
    acompanha.
 
+   A mesma revisão mostrou que `sugerirValor` tinha outros dois call sites sem gate: o `onChange` do
+   `<Select>` de serviço e o do checkbox de manejo. Na edição, trocar o serviço ou marcar o manejo
+   reescrevia `valor` a partir do catálogo (e da faixa errada, porque o porte é `""` na edição), por cima
+   do snapshot. Os três call sites de `sugerirValor` passam a ser gateados por `!editando`. Na edição o
+   `valor` é o que ela cobrou: se quiser mudá-lo, edita o campo à mão. Decisão do Diogo em 24/07/2026,
+   corrigida dentro deste PR por ser o mesmo mecanismo e o contexto estar quente.
+
 4. **Os flags chegam ao atendimento pelo `petSelecionado`, sem request novo.** O state local já guarda
    `{id, rotulo, porte}` capturado no `escolherPet` (`AtendimentoForm.tsx:125`), e os flags já vêm no
    payload de `/pets/?search=`. Descartados: `usePet(id)` (request extra para dado que já está na tela) e
