@@ -252,8 +252,11 @@ export function AtendimentoForm() {
         <Select
           label="Serviço"
           {...register("servico", {
-            onChange: (e) =>
-              sugerirValor(e.target.value, petSelecionado?.porte ?? "", manejoEspecial),
+            // Só sugere na criação. Na edição, `valor` é o snapshot do que ela cobrou
+            // (invariante 7); trocar o serviço não pode reescrevê-lo — ela ajusta à mão.
+            onChange: (e) => {
+              if (!editando) sugerirValor(e.target.value, petSelecionado?.porte ?? "", manejoEspecial);
+            },
           })}
         >
           <option value="0">Selecione...</option>
@@ -272,8 +275,9 @@ export function AtendimentoForm() {
         <Checkbox
           label="Manejo especial (pet agressivo ou contenção) · +40%"
           {...register("manejo_especial", {
-            onChange: (e) =>
-              sugerirValor(servicoAtual, petSelecionado?.porte ?? "", e.target.checked),
+            onChange: (e) => {
+              if (!editando) sugerirValor(servicoAtual, petSelecionado?.porte ?? "", e.target.checked);
+            },
           })}
         />
 

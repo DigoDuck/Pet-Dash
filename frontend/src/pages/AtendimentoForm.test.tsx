@@ -380,4 +380,44 @@ describe("AtendimentoForm", () => {
     expect(screen.getByLabelText(/Manejo especial/)).not.toBeChecked();
     expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00");
   });
+
+  // Achado 2 (revisão PR 20 Task 3): o onChange do Select de Serviço e do Checkbox de
+  // manejo ainda chamavam `sugerirValor` sem checar `editando`. Na edição o porte vem
+  // "" (a hidratação não traz o porte do pet) — trocar o serviço ou marcar o manejo
+  // sugeria pela faixa errada e apagava o valor histórico (invariante 7).
+  it("trocar o serviço na edição não reescreve o valor histórico", async () => {
+    server.use(
+      servicosComFaixas(),
+      petsOk("G"),
+      http.get(`${BASE}/atendimentos/42/`, () => HttpResponse.json(atendimentoExistente())),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarEdicao();
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00"));
+    await screen.findByRole("option", { name: "Banho" });
+
+    await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
+
+    // Sem o gate: porte "" na edição → sugeriria 65,00 (faixa pequeno) por cima do snapshot.
+    expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00");
+  });
+
+  it("marcar o manejo na edição não reescreve o valor histórico", async () => {
+    server.use(
+      servicosComFaixas(),
+      petsOk("G"),
+      http.get(`${BASE}/atendimentos/42/`, () => HttpResponse.json(atendimentoExistente())),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarEdicao();
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00"));
+
+    await userEvent.click(screen.getByLabelText(/Manejo especial/));
+
+    // O checkbox alterna normalmente, mas o valor histórico fica.
+    expect(screen.getByLabelText(/Manejo especial/)).toBeChecked();
+    expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00");
+  });
 });
