@@ -1,14 +1,7 @@
 import { Link } from "react-router-dom";
-import type { Pet } from "../../lib/types";
-import { Badge } from "../ui/Badge";
+import { ROTULOS_PORTE, type Pet } from "../../lib/types";
 import { Card } from "../ui/Card";
-
-const ROTULOS_PORTE: Record<Pet["porte"], string> = {
-  "": "Porte não informado",
-  P: "Pequeno",
-  M: "Médio",
-  G: "Grande",
-};
+import { BadgesPet } from "./BadgesPet";
 
 export function PetCard({ pet }: { pet: Pet }) {
   return (
@@ -21,7 +14,9 @@ export function PetCard({ pet }: { pet: Pet }) {
               {pet.raca || "Sem raça definida"} · {ROTULOS_PORTE[pet.porte]}
             </p>
           </div>
-          {pet.vip && <Badge variant="vip">VIP</Badge>}
+          <div className="flex shrink-0 flex-wrap justify-end gap-1">
+            <BadgesPet pet={pet} />
+          </div>
         </div>
       </Card>
     </Link>

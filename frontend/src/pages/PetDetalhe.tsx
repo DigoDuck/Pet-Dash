@@ -2,21 +2,15 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ErroAoCarregar } from "../components/ErroAoCarregar";
 import { EstadoVazio } from "../components/EstadoVazio";
+import { BadgesPet } from "../components/clientes/BadgesPet";
 import { HistoricoTabela } from "../components/clientes/HistoricoTabela";
 import { PetForm } from "../components/clientes/PetForm";
-import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { Paginacao } from "../components/ui/Paginacao";
 import { useAtendimentosDoPet } from "../hooks/useAtendimentos";
 import { useAtualizarPet, useDesativarPet, usePet } from "../hooks/usePets";
-
-const ROTULOS_PORTE: Record<string, string> = {
-  "": "Porte não informado",
-  P: "Pequeno",
-  M: "Médio",
-  G: "Grande",
-};
+import { ROTULOS_PORTE } from "../lib/types";
 
 export function PetDetalhe() {
   const { id } = useParams();
@@ -57,9 +51,9 @@ export function PetDetalhe() {
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="font-display text-3xl text-escuro">{pet.data.nome}</h1>
-            {pet.data.vip && <Badge variant="vip">VIP</Badge>}
+            <BadgesPet pet={pet.data} />
           </div>
           <p className="mt-1 text-sm text-neutro">
             {pet.data.raca || "Sem raça definida"} · {ROTULOS_PORTE[pet.data.porte]} ·{" "}
