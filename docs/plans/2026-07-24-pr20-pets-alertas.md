@@ -319,7 +319,7 @@ npm run test -- src/components/clientes/PetForm.test.tsx
 
 Esperado: FAIL — `Unable to find a label with the text of: /agressivo/i`.
 
-- [ ] **Passo 3: Adicionar os campos ao type `Pet`**
+- [ ] **Passo 3: Adicionar os campos ao type `Pet` e centralizar os rótulos de porte**
 
 Em `frontend/src/lib/types.ts`, na `interface Pet`, após `ativo: boolean;`:
 
@@ -327,6 +327,20 @@ Em `frontend/src/lib/types.ts`, na `interface Pet`, após `ativo: boolean;`:
   agressivo: boolean;
   otite: boolean;
   problema_pele: boolean;
+```
+
+E logo após a constante `PORTES`, exportar o mapa de rótulos curtos:
+
+```ts
+/** Rótulo curto do porte, para exibição. `PORTES` (com a faixa de peso) é para o
+ *  formulário, onde ela precisa decidir; aqui a faixa só ocuparia espaço. Vivia
+ *  duplicado em PetCard e PetDetalhe — a tabela da aba Pets seria a terceira cópia. */
+export const ROTULOS_PORTE: Record<Porte, string> = {
+  "": "Porte não informado",
+  P: "Pequeno",
+  M: "Médio",
+  G: "Grande",
+};
 ```
 
 - [ ] **Passo 4: Adicionar os campos a `PetEntrada`**
@@ -767,16 +781,9 @@ Substituir `frontend/src/components/clientes/PetCard.tsx` por:
 
 ```tsx
 import { Link } from "react-router-dom";
-import type { Pet } from "../../lib/types";
+import { ROTULOS_PORTE, type Pet } from "../../lib/types";
 import { Card } from "../ui/Card";
 import { BadgesPet } from "./BadgesPet";
-
-const ROTULOS_PORTE: Record<Pet["porte"], string> = {
-  "": "Porte não informado",
-  P: "Pequeno",
-  M: "Médio",
-  G: "Grande",
-};
 
 export function PetCard({ pet }: { pet: Pet }) {
   return (
@@ -810,13 +817,19 @@ Em `frontend/src/pages/PetDetalhe.tsx`, substituir o bloco das linhas 60-63:
           </div>
 ```
 
-E trocar o import do `Badge` pelo do `BadgesPet` (o `Badge` cru deixa de ser usado no arquivo):
+Trocar o import do `Badge` pelo do `BadgesPet` (o `Badge` cru deixa de ser usado no arquivo):
 
 ```tsx
 import { BadgesPet } from "../components/clientes/BadgesPet";
 ```
 
 Remover a linha `import { Badge } from "../components/ui/Badge";`.
+
+E remover o `const ROTULOS_PORTE` local (linhas 14-19), passando a importar o compartilhado:
+
+```tsx
+import { ROTULOS_PORTE } from "../lib/types";
+```
 
 - [ ] **Passo 4: Rodar a suíte e confirmar que passa**
 
@@ -1034,15 +1047,8 @@ Criar `frontend/src/components/clientes/TabelaPets.tsx`:
 
 ```tsx
 import { Link } from "react-router-dom";
-import type { Pet } from "../../lib/types";
+import { ROTULOS_PORTE, type Pet } from "../../lib/types";
 import { BadgesPet } from "./BadgesPet";
-
-const ROTULOS_PORTE: Record<Pet["porte"], string> = {
-  "": "—",
-  P: "Pequeno",
-  M: "Médio",
-  G: "Grande",
-};
 
 export function TabelaPets({ pets }: { pets: Pet[] }) {
   return (
