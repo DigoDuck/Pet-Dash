@@ -137,3 +137,47 @@ def test_post_de_pet_responde_vip_falso_sem_estourar(api):
     assert resp.json()["vip"] is False
     assert resp.json()["qtd_visitas"] == 0
     assert resp.json()["total_gasto"] == "0.00"
+
+
+def test_cria_pet_com_condicoes(api):
+    """Os três flags são graváveis no create e voltam na resposta."""
+    tutor = TutorFactory()
+
+    resp = api.post(
+        "/api/pets/",
+        {
+            "tutor": tutor.id,
+            "nome": "Thor",
+            "agressivo": True,
+            "otite": True,
+            "problema_pele": True,
+        },
+    )
+
+    assert resp.status_code == 201
+    assert resp.json()["agressivo"] is True
+    assert resp.json()["otite"] is True
+    assert resp.json()["problema_pele"] is True
+
+
+def test_pet_nasce_sem_condicoes(api):
+    """default=False: pet cadastrado sem os campos não vira agressivo por omissão."""
+    tutor = TutorFactory()
+
+    resp = api.post("/api/pets/", {"tutor": tutor.id, "nome": "Luna"})
+
+    assert resp.json()["agressivo"] is False
+    assert resp.json()["otite"] is False
+    assert resp.json()["problema_pele"] is False
+
+
+def test_patch_desmarca_condicao(api):
+    """Otite tratada some da ficha — o PATCH precisa aceitar voltar para False."""
+    pet = PetFactory(otite=True)
+
+    resp = api.patch(f"/api/pets/{pet.id}/", {"otite": False})
+
+    assert resp.status_code == 200
+    assert resp.json()["otite"] is False
+    pet.refresh_from_db()
+    assert pet.otite is False

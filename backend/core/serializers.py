@@ -24,6 +24,7 @@ class PetSerializer(serializers.ModelSerializer):
         model = models.Pet
         fields = [
             "id", "tutor", "tutor_nome", "nome", "raca", "porte", "ativo",
+            "agressivo", "otite", "problema_pele",
             "created_at", "vip", "qtd_visitas", "total_gasto",
         ]
         read_only_fields = ["ativo", "created_at"]
