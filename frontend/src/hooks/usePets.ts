@@ -7,6 +7,9 @@ export interface PetEntrada {
   nome: string;
   raca: string;
   porte: Porte;
+  agressivo: boolean;
+  otite: boolean;
+  problema_pele: boolean;
 }
 
 export const chavesPets = {

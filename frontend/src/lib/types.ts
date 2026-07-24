@@ -28,6 +28,9 @@ export interface Pet {
   vip: boolean;
   qtd_visitas: number;
   total_gasto: string;
+  agressivo: boolean;
+  otite: boolean;
+  problema_pele: boolean;
 }
 
 export interface Pagamento {
@@ -70,6 +73,16 @@ export const PORTES: { valor: Porte; rotulo: string }[] = [
   { valor: "M", rotulo: "Médio (10 a 15 kg)" },
   { valor: "G", rotulo: "Grande (acima de 15 kg)" },
 ];
+
+/** Rótulo curto do porte, para exibição. `PORTES` (com a faixa de peso) é para o
+ *  formulário, onde ela precisa decidir; aqui a faixa só ocuparia espaço. Vivia
+ *  duplicado em PetCard e PetDetalhe — a tabela da aba Pets seria a terceira cópia. */
+export const ROTULOS_PORTE: Record<Porte, string> = {
+  "": "Porte não informado",
+  P: "Pequeno",
+  M: "Médio",
+  G: "Grande",
+};
 
 export const TAMANHO_PAGINA = 50;
 

@@ -99,7 +99,14 @@ export function PetDetalhe() {
       <Modal aberto={editando} titulo="Editar pet" aoFechar={() => setEditando(false)}>
         <PetForm
           tutorId={pet.data.tutor}
-          inicial={{ nome: pet.data.nome, raca: pet.data.raca, porte: pet.data.porte }}
+          inicial={{
+            nome: pet.data.nome,
+            raca: pet.data.raca,
+            porte: pet.data.porte,
+            agressivo: pet.data.agressivo,
+            otite: pet.data.otite,
+            problema_pele: pet.data.problema_pele,
+          }}
           enviando={atualizar.isPending}
           aoCancelar={() => setEditando(false)}
           aoSalvar={(dados) => atualizar.mutate(dados, { onSuccess: () => setEditando(false) })}
