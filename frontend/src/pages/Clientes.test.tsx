@@ -16,6 +16,14 @@ function paginado(results: unknown[], count = results.length) {
   return { count, next: null, previous: null, results };
 }
 
+function pet(id: number, nome: string, over: Record<string, unknown> = {}) {
+  return {
+    id, tutor: 3, tutor_nome: "Camila Souza", nome, raca: "SRD", porte: "M",
+    ativo: true, created_at: "2026-01-01", vip: false, qtd_visitas: 0, total_gasto: "0.00",
+    agressivo: false, otite: false, problema_pele: false, ...over,
+  };
+}
+
 // Nome diferente do tutor da tabela de propósito: os destaques ficam na mesma página
 // que a lista, e um nome repetido tornaria as buscas por texto ambíguas.
 const PET_VIP = {
@@ -53,6 +61,62 @@ beforeEach(() => {
 });
 
 describe("Clientes", () => {
+  it("o switch troca a lista de tutores para pets", async () => {
+    server.use(
+      http.get(`${BASE}/tutores/`, () => HttpResponse.json(paginado([tutor(1, "Ana Clara")]))),
+      http.get(`${BASE}/pets/`, () => HttpResponse.json(paginado([pet(7, "Thor")]))),
+    );
+
+    renderizarComProvedores(<Clientes />, { rota: "/clientes", caminho: "/clientes" });
+    await screen.findByText("Ana Clara");
+
+    await userEvent.click(screen.getByRole("button", { name: "Pets" }));
+
+    expect(await screen.findByRole("link", { name: /Thor/ })).toHaveAttribute("href", "/pets/7");
+    expect(screen.queryByText("Ana Clara")).not.toBeInTheDocument();
+  });
+
+  it("a aba Pets mostra as badges de condição", async () => {
+    server.use(
+      http.get(`${BASE}/tutores/`, () => HttpResponse.json(paginado([tutor(1, "Ana Clara")]))),
+      http.get(`${BASE}/pets/`, () =>
+        HttpResponse.json(paginado([pet(7, "Thor", { agressivo: true, otite: true })])),
+      ),
+    );
+
+    renderizarComProvedores(<Clientes />, { rota: "/clientes", caminho: "/clientes" });
+    await screen.findByText("Ana Clara");
+
+    await userEvent.click(screen.getByRole("button", { name: "Pets" }));
+
+    expect(await screen.findByText("Agressivo")).toBeInTheDocument();
+    expect(screen.getByText("Otite")).toBeInTheDocument();
+    expect(screen.queryByText("Pele")).not.toBeInTheDocument();
+  });
+
+  // A busca da aba de tutores é nome+telefone; a de pets é nome do pet + nome do tutor.
+  // Carregar o termo de uma para a outra devolve "nenhum resultado" sem explicar por quê.
+  it("trocar de aba limpa a busca e requisita a lista nova", async () => {
+    const buscasPet: string[] = [];
+    server.use(
+      http.get(`${BASE}/tutores/`, () => HttpResponse.json(paginado([tutor(1, "Ana Clara")]))),
+      http.get(`${BASE}/pets/`, ({ request }) => {
+        buscasPet.push(new URL(request.url).searchParams.get("search") ?? "");
+        return HttpResponse.json(paginado([pet(7, "Thor")]));
+      }),
+    );
+
+    renderizarComProvedores(<Clientes />, { rota: "/clientes", caminho: "/clientes" });
+    await screen.findByText("Ana Clara");
+    await userEvent.type(screen.getByLabelText("Buscar por nome ou telefone"), "Ana");
+
+    await userEvent.click(screen.getByRole("button", { name: "Pets" }));
+
+    await screen.findByRole("link", { name: /Thor/ });
+    expect(screen.getByLabelText("Buscar por nome do pet ou tutor")).toHaveValue("");
+    await waitFor(() => expect(buscasPet).toContain(""));
+  });
+
   it("lista os tutores vindos da API", async () => {
     server.use(http.get(`${BASE}/tutores/`, () => HttpResponse.json(paginado([tutor(1, "Ana Clara")]))));
 

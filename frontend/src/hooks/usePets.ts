@@ -14,6 +14,7 @@ export interface PetEntrada {
 
 export const chavesPets = {
   raiz: ["pets"] as const,
+  lista: (busca: string, pagina: number) => ["pets", "lista", busca, pagina] as const,
   doTutor: (tutorId: number) => ["pets", "doTutor", tutorId] as const,
   detalhe: (id: number) => ["pets", "detalhe", id] as const,
 };
@@ -22,6 +23,20 @@ export function usePetsDoTutor(tutorId: number) {
   return useQuery({
     queryKey: chavesPets.doTutor(tutorId),
     queryFn: () => request<Paginated<Pet>>(`/pets/?tutor=${tutorId}`),
+  });
+}
+
+/** Listagem paginada da aba Pets. Não dá para reusar o `useBuscaPets`: ele tem
+ *  `enabled: termo.length > 0` e devolveria lista vazia com a busca em branco, que é
+ *  justamente o estado inicial da aba. */
+export function usePets(busca: string, pagina: number, ativo = true) {
+  const params = new URLSearchParams({ page: String(pagina) });
+  if (busca) params.set("search", busca);
+  return useQuery({
+    queryKey: chavesPets.lista(busca, pagina),
+    queryFn: () => request<Paginated<Pet>>(`/pets/?${params}`),
+    enabled: ativo,
+    placeholderData: keepPreviousData,
   });
 }
 
