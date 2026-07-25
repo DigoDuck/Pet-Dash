@@ -61,6 +61,41 @@ beforeEach(() => {
 });
 
 describe("Clientes", () => {
+  it("mantém inativa a query da outra aba", async () => {
+    const requisicoesTutores: string[] = [];
+    const requisicoesPets: Array<{ pagina: string; busca: string }> = [];
+    server.use(
+      http.get(`${BASE}/tutores/`, ({ request }) => {
+        requisicoesTutores.push(new URL(request.url).searchParams.get("search") ?? "");
+        return HttpResponse.json(paginado([tutor(1, "Ana Clara")]));
+      }),
+      http.get(`${BASE}/pets/`, ({ request }) => {
+        const url = new URL(request.url);
+        requisicoesPets.push({
+          pagina: url.searchParams.get("page") ?? "",
+          busca: url.searchParams.get("search") ?? "",
+        });
+        return HttpResponse.json(paginado([pet(7, "Thor")], 51));
+      }),
+    );
+
+    renderizarComProvedores(<Clientes />, { rota: "/clientes", caminho: "/clientes" });
+    await screen.findByText("Ana Clara");
+    expect(requisicoesPets).toHaveLength(0);
+
+    await userEvent.click(screen.getByRole("button", { name: "Pets" }));
+    await screen.findByRole("link", { name: /Thor/ });
+    expect(requisicoesPets).toHaveLength(1);
+    const tutoresAntesDaBusca = requisicoesTutores.length;
+
+    await userEvent.type(screen.getByLabelText("Buscar por nome do pet ou tutor"), "Thor");
+    await waitFor(() => expect(requisicoesPets.at(-1)?.busca).toBe("Thor"));
+    await userEvent.click(screen.getByRole("button", { name: "Próxima" }));
+    await waitFor(() => expect(requisicoesPets.at(-1)?.pagina).toBe("2"));
+
+    expect(requisicoesTutores).toHaveLength(tutoresAntesDaBusca);
+  });
+
   it("o switch troca a lista de tutores para pets", async () => {
     server.use(
       http.get(`${BASE}/tutores/`, () => HttpResponse.json(paginado([tutor(1, "Ana Clara")]))),
@@ -97,9 +132,13 @@ describe("Clientes", () => {
   // A busca da aba de tutores é nome+telefone; a de pets é nome do pet + nome do tutor.
   // Carregar o termo de uma para a outra devolve "nenhum resultado" sem explicar por quê.
   it("trocar de aba limpa a busca e requisita a lista nova", async () => {
+    const buscasTutores: string[] = [];
     const buscasPet: string[] = [];
     server.use(
-      http.get(`${BASE}/tutores/`, () => HttpResponse.json(paginado([tutor(1, "Ana Clara")]))),
+      http.get(`${BASE}/tutores/`, ({ request }) => {
+        buscasTutores.push(new URL(request.url).searchParams.get("search") ?? "");
+        return HttpResponse.json(paginado([tutor(1, "Ana Clara")]));
+      }),
       http.get(`${BASE}/pets/`, ({ request }) => {
         buscasPet.push(new URL(request.url).searchParams.get("search") ?? "");
         return HttpResponse.json(paginado([pet(7, "Thor")]));
@@ -109,12 +148,48 @@ describe("Clientes", () => {
     renderizarComProvedores(<Clientes />, { rota: "/clientes", caminho: "/clientes" });
     await screen.findByText("Ana Clara");
     await userEvent.type(screen.getByLabelText("Buscar por nome ou telefone"), "Ana");
+    await waitFor(() => expect(buscasTutores).toContain("Ana"));
 
     await userEvent.click(screen.getByRole("button", { name: "Pets" }));
 
     await screen.findByRole("link", { name: /Thor/ });
     expect(screen.getByLabelText("Buscar por nome do pet ou tutor")).toHaveValue("");
-    await waitFor(() => expect(buscasPet).toContain(""));
+    expect(buscasPet[0]).toBe("");
+  });
+
+  it("restaura a primeira página de pets ao trocar de aba", async () => {
+    const requisicoesPets: Array<{ pagina: string; busca: string }> = [];
+    server.use(
+      http.get(`${BASE}/tutores/`, () => HttpResponse.json(paginado([tutor(1, "Ana Clara")]))),
+      http.get(`${BASE}/pets/`, ({ request }) => {
+        const url = new URL(request.url);
+        requisicoesPets.push({
+          pagina: url.searchParams.get("page") ?? "",
+          busca: url.searchParams.get("search") ?? "",
+        });
+        return HttpResponse.json(paginado([pet(7, "Thor")], 51));
+      }),
+    );
+
+    renderizarComProvedores(<Clientes />, { rota: "/clientes", caminho: "/clientes" });
+    await screen.findByText("Ana Clara");
+
+    await userEvent.click(screen.getByRole("button", { name: "Pets" }));
+    await screen.findByRole("link", { name: /Thor/ });
+    const campoBusca = screen.getByLabelText("Buscar por nome do pet ou tutor");
+    await userEvent.type(campoBusca, "Thor");
+    await waitFor(() => expect(requisicoesPets.at(-1)?.busca).toBe("Thor"));
+    await userEvent.clear(campoBusca);
+    await waitFor(() => expect(requisicoesPets.at(-1)?.busca).toBe(""));
+    await userEvent.click(screen.getByRole("button", { name: "Próxima" }));
+    await waitFor(() => expect(requisicoesPets.at(-1)?.pagina).toBe("2"));
+    expect(await screen.findByText("Página 2 de 2")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Tutores" }));
+    await screen.findByText("Ana Clara");
+    await userEvent.click(screen.getByRole("button", { name: "Pets" }));
+
+    expect(await screen.findByText("Página 1 de 2")).toBeInTheDocument();
   });
 
   it("lista os tutores vindos da API", async () => {
