@@ -10,12 +10,15 @@ export const chavesTutores = {
   detalhe: (id: number) => ["tutores", "detalhe", id] as const,
 };
 
-export function useTutores(busca: string, pagina: number) {
+/** `ativo` desliga a consulta quando a página está mostrando a outra aba: sem isso a
+ *  lista escondida continua fazendo request a cada busca e a cada troca de página. */
+export function useTutores(busca: string, pagina: number, ativo = true) {
   const params = new URLSearchParams({ page: String(pagina) });
   if (busca) params.set("search", busca);
   return useQuery({
     queryKey: chavesTutores.lista(busca, pagina),
     queryFn: () => request<Paginated<Tutor>>(`/tutores/?${params}`),
+    enabled: ativo,
     // Sem isto a lista pisca em branco a cada tecla digitada na busca.
     placeholderData: keepPreviousData,
   });

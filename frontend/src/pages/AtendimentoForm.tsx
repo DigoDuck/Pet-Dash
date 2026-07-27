@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
+import { AlertasDoPet } from "../components/atendimentos/AlertasDoPet";
 import { PacoteAtivoBanner } from "../components/atendimentos/PacoteAtivoBanner";
 import { PagamentosField } from "../components/atendimentos/PagamentosField";
 import { Button } from "../components/ui/Button";
@@ -40,6 +41,9 @@ export function AtendimentoForm() {
     id: number;
     rotulo: string;
     porte: Porte;
+    agressivo: boolean;
+    otite: boolean;
+    problema_pele: boolean;
   } | null>(null);
   const [cobrarAvulso, setCobrarAvulso] = useState(false);
 
@@ -77,7 +81,18 @@ export function AtendimentoForm() {
       // Ao editar, o porte não vem no payload do atendimento. Fica "" e a sugestão de
       // preço cai na faixa do pequeno — o que não importa: o `valor` já foi carregado
       // do registro, e a sugestão só sobrescreve se ela trocar o serviço.
-      setPetSelecionado({ id: existente.data.pet, rotulo: existente.data.pet_nome, porte: "" });
+      //
+      // Na edição os flags ficam em `false` de propósito: o payload do atendimento não os
+      // traz, e o banner é ferramenta de decisão na criação. Igual ao PacoteAtivoBanner,
+      // que também só existe lá.
+      setPetSelecionado({
+        id: existente.data.pet,
+        rotulo: existente.data.pet_nome,
+        porte: "",
+        agressivo: false,
+        otite: false,
+        problema_pele: false,
+      });
     }
   }, [existente.data, reset]);
 
@@ -125,10 +140,34 @@ export function AtendimentoForm() {
   function escolherPet(item: { id: number; rotulo: string } | null) {
     const pet = buscaPets.data?.results.find((p) => p.id === item?.id);
     const porte = pet?.porte ?? "";
-    setPetSelecionado(item ? { ...item, porte } : null);
+    // Pet cadastrado como agressivo entra com o manejo já marcado. É default, não trava:
+    // ela desmarca se o pet veio manso e o preço acompanha pelo onChange do checkbox.
+    const agressivo = pet?.agressivo ?? false;
+    setPetSelecionado(
+      item
+        ? {
+            ...item,
+            porte,
+            agressivo,
+            otite: pet?.otite ?? false,
+            problema_pele: pet?.problema_pele ?? false,
+          }
+        : null,
+    );
     setCobrarAvulso(false); // novo pet volta ao default seguro
     setValue("pet", item?.id ?? 0);
-    sugerirValor(servicoAtual, porte, manejoEspecial);
+    // Os efeitos financeiros só valem na criação. Na edição, `valor` é o snapshot do que
+    // ela cobrou naquele dia (invariante 7) — reencostar no campo Pet para corrigir um
+    // vínculo errado não pode reescrever preço nem remarcar o manejo. O `sugerirValor`
+    // já vivia aqui sem gate e já apagava o valor histórico nesse caminho; o gate fecha
+    // o buraco antigo junto com o novo.
+    if (!editando) {
+      setValue("manejo_especial", agressivo);
+      // `agressivo`, e NÃO o `manejoEspecial` do watch: o watch ainda carrega o valor
+      // anterior neste tick. Passar o velho deixaria o checkbox marcado com o preço sem
+      // os 40% — erro que não aparece na tela e sangra dinheiro todo dia.
+      sugerirValor(servicoAtual, porte, agressivo);
+    }
   }
 
   function enviar(dados: AtendimentoEntrada) {
@@ -188,6 +227,14 @@ export function AtendimentoForm() {
           )}
         />
 
+        {!editando && petSelecionado && (
+          <AlertasDoPet
+            agressivo={petSelecionado.agressivo}
+            otite={petSelecionado.otite}
+            problemaPele={petSelecionado.problema_pele}
+          />
+        )}
+
         {/* O banner (e o "cobrar como avulso") só existe na criação: na edição o vínculo
             é o do registro e trocá-lo depois reescreveria faturamento passado. */}
         {!editando && petSelecionado && usaPacote && pacote && (
@@ -205,8 +252,11 @@ export function AtendimentoForm() {
         <Select
           label="Serviço"
           {...register("servico", {
-            onChange: (e) =>
-              sugerirValor(e.target.value, petSelecionado?.porte ?? "", manejoEspecial),
+            // Só sugere na criação. Na edição, `valor` é o snapshot do que ela cobrou
+            // (invariante 7); trocar o serviço não pode reescrevê-lo — ela ajusta à mão.
+            onChange: (e) => {
+              if (!editando) sugerirValor(e.target.value, petSelecionado?.porte ?? "", manejoEspecial);
+            },
           })}
         >
           <option value="0">Selecione...</option>
@@ -225,8 +275,9 @@ export function AtendimentoForm() {
         <Checkbox
           label="Manejo especial (pet agressivo ou contenção) · +40%"
           {...register("manejo_especial", {
-            onChange: (e) =>
-              sugerirValor(servicoAtual, petSelecionado?.porte ?? "", e.target.checked),
+            onChange: (e) => {
+              if (!editando) sugerirValor(servicoAtual, petSelecionado?.porte ?? "", e.target.checked);
+            },
           })}
         />
 

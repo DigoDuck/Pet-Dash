@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { ErroAoCarregar } from "../components/ErroAoCarregar";
 import { EstadoVazio } from "../components/EstadoVazio";
 import { PetsVip } from "../components/clientes/PetsVip";
+import { TabelaPets } from "../components/clientes/TabelaPets";
+import { TabelaTutores } from "../components/clientes/TabelaTutores";
 import { TopTutores } from "../components/clientes/TopTutores";
 import { TutorForm } from "../components/clientes/TutorForm";
 import { Bloco } from "../components/ui/Bloco";
@@ -11,10 +12,14 @@ import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { Paginacao } from "../components/ui/Paginacao";
 import { useDashboard } from "../hooks/useDashboard";
+import { usePets } from "../hooks/usePets";
 import { useCriarTutor, useTutores } from "../hooks/useTutores";
 import { inicioDaCompetencia, mesCorrente, ultimoDiaDoMes } from "../lib/competencia";
 
+type Aba = "tutores" | "pets";
+
 export function Clientes() {
+  const [aba, setAba] = useState<Aba>("tutores");
   const [texto, setTexto] = useState("");
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
@@ -30,7 +35,8 @@ export function Clientes() {
     return () => clearTimeout(id);
   }, [texto]);
 
-  const { data, isPending, isError, refetch } = useTutores(busca, pagina);
+  const tutores = useTutores(busca, pagina, aba === "tutores");
+  const pets = usePets(busca, pagina, aba === "pets");
   const criar = useCriarTutor();
 
   // Mesma chave que o Dashboard usa no mês corrente: a resposta vem do cache, sem
@@ -38,72 +44,92 @@ export function Clientes() {
   const mes = mesCorrente();
   const destaques = useDashboard(inicioDaCompetencia(mes), ultimoDiaDoMes(mes));
 
+  // A busca não sobrevive à troca de aba: em Tutores ela casa nome+telefone do dono, em
+  // Pets casa nome do pet + nome do dono. Levar o termo junto devolve "nada encontrado"
+  // sem dizer por quê.
+  function trocarAba(nova: Aba) {
+    setAba(nova);
+    setTexto("");
+    setBusca("");
+    setPagina(1);
+  }
+
+  const consulta = aba === "tutores" ? tutores : pets;
+  const rotuloBusca =
+    aba === "tutores" ? "Buscar por nome ou telefone" : "Buscar por nome do pet ou tutor";
+
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
         <h1 className="font-display text-3xl text-escuro">Clientes</h1>
+        {/* Continua "Novo tutor" nas duas abas: pet só existe dentro de um dono, e a
+            criação vive na ficha do tutor, onde o dono já está definido. */}
         <Button onClick={() => setModalAberto(true)}>Novo tutor</Button>
       </div>
 
-      <div className="mt-6 max-w-sm">
-        <Input
-          label="Buscar por nome ou telefone"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          placeholder="Ana, 71988..."
-        />
+      <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
+        <div className="max-w-sm grow">
+          <Input
+            label={rotuloBusca}
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder={aba === "tutores" ? "Ana, 71988..." : "Thor, Ana..."}
+          />
+        </div>
+        <div className="flex rounded-lg border border-neutro-light/60 p-0.5" role="group">
+          {(["tutores", "pets"] as const).map((valor) => (
+            <button
+              key={valor}
+              type="button"
+              onClick={() => trocarAba(valor)}
+              aria-pressed={aba === valor}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                aba === valor ? "bg-marsala text-creme" : "text-neutro hover:text-escuro"
+              }`}
+            >
+              {valor === "tutores" ? "Tutores" : "Pets"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="mt-6">
-        {isError ? (
-          <ErroAoCarregar aoTentarDeNovo={() => refetch()} />
-        ) : isPending ? (
+        {consulta.isError ? (
+          <ErroAoCarregar aoTentarDeNovo={() => consulta.refetch()} />
+        ) : consulta.isPending ? (
           <p className="text-sm text-neutro">Carregando...</p>
-        ) : data.count === 0 ? (
+        ) : consulta.data.count === 0 ? (
           <EstadoVazio
-            titulo={busca ? "Nenhum cliente encontrado" : "Nenhum cliente ainda"}
+            titulo={
+              busca
+                ? aba === "tutores"
+                  ? "Nenhum cliente encontrado"
+                  : "Nenhum pet encontrado"
+                : aba === "tutores"
+                  ? "Nenhum cliente ainda"
+                  : "Nenhum pet ainda"
+            }
             descricao={
               busca
-                ? "Tente outro nome ou telefone."
-                : "Cadastre o primeiro tutor para começar."
+                ? "Tente outro nome."
+                : aba === "tutores"
+                  ? "Cadastre o primeiro tutor para começar."
+                  : "Os pets aparecem aqui depois de cadastrados na ficha do tutor."
             }
             acao={
-              busca ? undefined : <Button onClick={() => setModalAberto(true)}>Novo tutor</Button>
+              busca || aba === "pets" ? undefined : (
+                <Button onClick={() => setModalAberto(true)}>Novo tutor</Button>
+              )
             }
           />
         ) : (
           <>
-            <div className="overflow-x-auto rounded-2xl border border-neutro-light/60 bg-creme">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-[10px] tracking-[0.12em] text-neutro uppercase">
-                    <th className="px-6 py-3 font-semibold">Tutor</th>
-                    <th className="px-2 py-3 font-semibold">Telefone</th>
-                    <th className="px-6 py-3 font-semibold">E-mail</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.results.map((tutor) => (
-                    <tr
-                      key={tutor.id}
-                      className="border-t border-neutro-light/60 transition-colors hover:bg-creme/50"
-                    >
-                      <td className="px-6 py-4">
-                        <Link to={`/clientes/${tutor.id}`} className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-marsala font-semibold text-creme">
-                            {tutor.nome.charAt(0).toUpperCase()}
-                          </span>
-                          <span className="font-medium text-escuro">{tutor.nome}</span>
-                        </Link>
-                      </td>
-                      <td className="px-2 py-4 font-mono text-neutro">{tutor.telefone}</td>
-                      <td className="px-6 py-4 text-neutro">{tutor.email || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <Paginacao pagina={pagina} count={data.count} aoMudar={setPagina} />
+            {aba === "tutores" ? (
+              <TabelaTutores tutores={tutores.data!.results} />
+            ) : (
+              <TabelaPets pets={pets.data!.results} />
+            )}
+            <Paginacao pagina={pagina} count={consulta.data.count} aoMudar={setPagina} />
           </>
         )}
       </div>

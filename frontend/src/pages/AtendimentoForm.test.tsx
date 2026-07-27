@@ -33,13 +33,14 @@ function servicosComFaixas() {
   );
 }
 
-function petsOk(porte = "") {
+function petsOk(porte = "", flags: Partial<Record<"agressivo" | "otite" | "problema_pele", boolean>> = {}) {
   return http.get(`${BASE}/pets/`, () =>
     HttpResponse.json({
       count: 1, next: null, previous: null,
       results: [{
         id: 7, tutor: 1, tutor_nome: "Ana Clara", nome: "Luna", raca: "", porte,
         ativo: true, created_at: "", vip: false, qtd_visitas: 0, total_gasto: "0.00",
+        agressivo: false, otite: false, problema_pele: false, ...flags,
       }],
     }),
   );
@@ -247,6 +248,7 @@ describe("AtendimentoForm", () => {
 
     expect(await screen.findByText("Pacote Fidelidade vinculado")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adicionar pagamento" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Alertas deste pet/i)).not.toBeInTheDocument();
   });
 
   it("'cobrar como avulso' desvincula e revela os pagamentos", async () => {
@@ -288,5 +290,138 @@ describe("AtendimentoForm", () => {
 
     expect(await screen.findByText(/sem saldo/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Adicionar pagamento" })).toBeInTheDocument();
+  });
+
+  // O flag do pet é o motivo de o PR existir: ela não pode depender de lembrar que o
+  // Thor morde. Pré-marcar sem trazer os 40% junto seria pior que não pré-marcar —
+  // o checkbox diria "+40%" e o valor sugerido estaria sem eles.
+  it("pet cadastrado como agressivo pré-marca o manejo e já sugere com os 40%", async () => {
+    server.use(
+      servicosComFaixas(),
+      petsOk("P", { agressivo: true }),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
+    await screen.findByRole("option", { name: "Banho" });
+    await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("65.00"));
+
+    await escolherLuna();
+
+    expect(await screen.findByText(/cadastrado como agressivo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Manejo especial/)).toBeChecked();
+    // 65 × 1,4 = 91. Se `sugerirValor` receber o `manejoEspecial` velho do watch, fica 65.
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("91.00"));
+  });
+
+  it("otite e problema de pele avisam sem tocar no manejo nem no valor", async () => {
+    server.use(
+      servicosComFaixas(),
+      petsOk("P", { otite: true, problema_pele: true }),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
+    await screen.findByRole("option", { name: "Banho" });
+    await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("65.00"));
+
+    await escolherLuna();
+
+    expect(await screen.findByText(/otite/i)).toBeInTheDocument();
+    expect(screen.getByText(/problema de pele/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Manejo especial/)).not.toBeChecked();
+    expect(screen.getByLabelText("Valor do serviço")).toHaveValue("65.00");
+  });
+
+  // Invariante 7 de novo, pelo caminho novo. Ela abre um atendimento antigo de pet
+  // agressivo em que cobrou sem acréscimo; pré-marcar aqui marcaria o checkbox e
+  // reescreveria o valor histórico numa ação que era só "corrigir o horário".
+  it("abrir a edição de pet agressivo não marca o manejo nem mexe no valor", async () => {
+    server.use(
+      servicosComFaixas(),
+      petsOk("G", { agressivo: true }),
+      http.get(`${BASE}/atendimentos/42/`, () => HttpResponse.json(atendimentoExistente())),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarEdicao();
+
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00"));
+    await screen.findByRole("option", { name: "Banho" });
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(screen.getByLabelText(/Manejo especial/)).not.toBeChecked();
+    expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00");
+    expect(screen.queryByText(/cadastrado como agressivo/i)).not.toBeInTheDocument();
+  });
+
+  // Achado 1 (revisão PR 20 Task 3): o Combobox de Pet não é desabilitado na edição, e
+  // `escolherPet` reescrevia manejo_especial e valor mesmo lá. Ela abre um atendimento
+  // antigo só para corrigir o vínculo do pet — reencostar no campo não pode remarcar o
+  // checkbox nem trazer o preço do catálogo por cima do que já foi cobrado.
+  it("reselecionar o pet na edição não marca o manejo nem reescreve o valor histórico", async () => {
+    server.use(
+      servicosComFaixas(),
+      petsOk("G", { agressivo: true }),
+      http.get(`${BASE}/atendimentos/42/`, () => HttpResponse.json(atendimentoExistente())),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarEdicao();
+
+    // Espera o registro hidratar o form e o catálogo carregar antes de reencostar no Pet.
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00"));
+    await screen.findByRole("option", { name: "Banho" });
+
+    await escolherLuna();
+
+    expect(screen.getByLabelText(/Manejo especial/)).not.toBeChecked();
+    expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00");
+  });
+
+  // Achado 2 (revisão PR 20 Task 3): o onChange do Select de Serviço e do Checkbox de
+  // manejo ainda chamavam `sugerirValor` sem checar `editando`. Na edição o porte vem
+  // "" (a hidratação não traz o porte do pet) — trocar o serviço ou marcar o manejo
+  // sugeria pela faixa errada e apagava o valor histórico (invariante 7).
+  it("trocar o serviço na edição não reescreve o valor histórico", async () => {
+    server.use(
+      servicosComFaixas(),
+      petsOk("G"),
+      http.get(`${BASE}/atendimentos/42/`, () => HttpResponse.json(atendimentoExistente())),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarEdicao();
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00"));
+    await screen.findByRole("option", { name: "Banho" });
+
+    await userEvent.selectOptions(screen.getByLabelText("Serviço"), "1");
+
+    // Sem o gate: porte "" na edição → sugeriria 65,00 (faixa pequeno) por cima do snapshot.
+    expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00");
+  });
+
+  it("marcar o manejo na edição não reescreve o valor histórico", async () => {
+    server.use(
+      servicosComFaixas(),
+      petsOk("G"),
+      http.get(`${BASE}/atendimentos/42/`, () => HttpResponse.json(atendimentoExistente())),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarEdicao();
+    await waitFor(() => expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00"));
+    // Espera o catálogo carregar antes de clicar: sem isto, se `listaServicos` ainda
+    // estivesse vazia, `sugerirValor` cairia no early return e o teste passaria mesmo sem
+    // o gate — travaria o comportamento errado.
+    await screen.findByRole("option", { name: "Banho" });
+
+    await userEvent.click(screen.getByLabelText(/Manejo especial/));
+
+    // O checkbox alterna normalmente, mas o valor histórico fica.
+    expect(screen.getByLabelText(/Manejo especial/)).toBeChecked();
+    expect(screen.getByLabelText("Valor do serviço")).toHaveValue("150.00");
   });
 });

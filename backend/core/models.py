@@ -31,6 +31,12 @@ class Pet(models.Model):
     nome = models.CharField(max_length=80)
     raca = models.CharField(max_length=80, blank=True, default="")
     porte = models.CharField(max_length=1, choices=Porte.choices, blank=True, default="")
+    # Condições que a Patricia precisa ver ANTES de atender, não durante. `agressivo`
+    # pré-marca o `manejo_especial` na criação do atendimento (é default, não trava);
+    # os outros dois são aviso puro e não tocam em valor nenhum.
+    agressivo = models.BooleanField(default=False)
+    otite = models.BooleanField(default=False)
+    problema_pele = models.BooleanField(default=False)
     ativo = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
