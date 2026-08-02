@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -169,8 +169,8 @@ describe("Financeiro", () => {
     await waitFor(() => expect(urls.some((u) => u.includes("tipo=variavel"))).toBe(true));
   });
 
-  it("excluir pede confirmação e não chama a API se o usuário cancelar", async () => {
-    vi.stubGlobal("confirm", vi.fn(() => false));
+  // Diálogo do app, não window.confirm: o nativo não aparecia no Firefox da Patricia.
+  it("excluir pede confirmação e não chama a API se o usuário voltar", async () => {
     let chamouDelete = false;
     server.use(
       http.get(`${BASE}/custos/`, () => HttpResponse.json(paginado([custo()]))),
@@ -187,12 +187,14 @@ describe("Financeiro", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Excluir" }));
 
-    expect(window.confirm).toHaveBeenCalled();
+    const dialogo = await screen.findByRole("dialog");
+    await userEvent.click(within(dialogo).getByRole("button", { name: "Voltar" }));
+
     expect(chamouDelete).toBe(false);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("excluir confirmado remove o custo", async () => {
-    vi.stubGlobal("confirm", vi.fn(() => true));
     let chamouDelete = false;
     server.use(
       http.get(`${BASE}/custos/`, () =>
@@ -210,6 +212,8 @@ describe("Financeiro", () => {
     await screen.findByText("Aluguel");
 
     await userEvent.click(screen.getByRole("button", { name: "Excluir" }));
+    const dialogo = await screen.findByRole("dialog");
+    await userEvent.click(within(dialogo).getByRole("button", { name: "Excluir" }));
 
     await waitFor(() => expect(chamouDelete).toBe(true));
     expect(await screen.findByText("Nenhum custo neste mês")).toBeInTheDocument();

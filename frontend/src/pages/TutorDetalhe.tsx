@@ -6,6 +6,7 @@ import { PetCard } from "../components/clientes/PetCard";
 import { PetForm } from "../components/clientes/PetForm";
 import { TutorForm } from "../components/clientes/TutorForm";
 import { Button } from "../components/ui/Button";
+import { Confirmacao } from "../components/ui/Confirmacao";
 import { Modal } from "../components/ui/Modal";
 import { useCriarPet, usePetsDoTutor } from "../hooks/usePets";
 import { useAtualizarTutor, useDesativarTutor, useTutor } from "../hooks/useTutores";
@@ -16,6 +17,7 @@ export function TutorDetalhe() {
   const navigate = useNavigate();
   const [editando, setEditando] = useState(false);
   const [novoPet, setNovoPet] = useState(false);
+  const [desativando, setDesativando] = useState(false);
 
   const tutor = useTutor(tutorId);
   const pets = usePetsDoTutor(tutorId);
@@ -27,7 +29,6 @@ export function TutorDetalhe() {
   if (tutor.isPending) return <p className="text-sm text-neutro">Carregando...</p>;
 
   function aoDesativar() {
-    if (!window.confirm("Desativar este tutor? Ele sai das listas, mas o histórico fica.")) return;
     desativar.mutate(tutorId, { onSuccess: () => navigate("/clientes") });
   }
 
@@ -52,7 +53,11 @@ export function TutorDetalhe() {
           <Button variant="secondary" onClick={() => setEditando(true)}>
             Editar
           </Button>
-          <Button variant="danger" onClick={aoDesativar} disabled={desativar.isPending}>
+          <Button
+            variant="danger"
+            onClick={() => setDesativando(true)}
+            disabled={desativar.isPending}
+          >
             Desativar
           </Button>
         </div>
@@ -104,6 +109,16 @@ export function TutorDetalhe() {
           aoSalvar={(dados) => criarPet.mutate(dados, { onSuccess: () => setNovoPet(false) })}
         />
       </Modal>
+
+      <Confirmacao
+        aberto={desativando}
+        titulo="Desativar tutor"
+        mensagem="Desativar este tutor? Ele sai das listas, mas o histórico fica."
+        rotuloConfirmar="Desativar"
+        enviando={desativar.isPending}
+        aoConfirmar={aoDesativar}
+        aoCancelar={() => setDesativando(false)}
+      />
     </div>
   );
 }

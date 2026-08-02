@@ -12,6 +12,7 @@ import type { Retirada } from "../../lib/types";
 import { ErroAoCarregar } from "../ErroAoCarregar";
 import { EstadoVazio } from "../EstadoVazio";
 import { Button } from "../ui/Button";
+import { Confirmacao } from "../ui/Confirmacao";
 import { Modal } from "../ui/Modal";
 import { Paginacao } from "../ui/Paginacao";
 import { RetiradaForm } from "./RetiradaForm";
@@ -20,6 +21,7 @@ export function RetiradasSecao({ mes }: { mes: string }) {
   const [pagina, setPagina] = useState(1);
   const [criando, setCriando] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Retirada | null>(null);
+  const [aExcluir, setAExcluir] = useState<Retirada | null>(null);
 
   // Retirada guarda data real, não competência: o mês vira intervalo (invariante 10
   // vale para o lançamento; o recorte é o mesmo que o dashboard usa para somar).
@@ -89,14 +91,7 @@ export function RetiradasSecao({ mes }: { mes: string }) {
                           <Button
                             variant="danger"
                             disabled={excluir.isPending}
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  "Excluir esta retirada? A exclusão é permanente e altera o fechamento do mês.",
-                                )
-                              )
-                                excluir.mutate(retirada.id);
-                            }}
+                            onClick={() => setAExcluir(retirada)}
                           >
                             Excluir
                           </Button>
@@ -124,6 +119,20 @@ export function RetiradasSecao({ mes }: { mes: string }) {
 
       {emEdicao && (
         <ModalEdicao retirada={emEdicao} mes={mes} aoFechar={() => setEmEdicao(null)} />
+      )}
+
+      {aExcluir && (
+        <Confirmacao
+          aberto
+          titulo="Excluir retirada"
+          mensagem={`Excluir "${aExcluir.descricao}"? A exclusão é permanente e altera o fechamento do mês.`}
+          rotuloConfirmar="Excluir"
+          enviando={excluir.isPending}
+          aoConfirmar={() =>
+            excluir.mutate(aExcluir.id, { onSettled: () => setAExcluir(null) })
+          }
+          aoCancelar={() => setAExcluir(null)}
+        />
       )}
     </section>
   );

@@ -1,16 +1,12 @@
+import { useState } from "react";
 import type { Atendimento } from "../../lib/types";
 import { useAtualizarAtendimento } from "../../hooks/useAtendimentos";
 import { Button } from "../ui/Button";
+import { Confirmacao } from "../ui/Confirmacao";
 
 export function StatusAcao({ atendimento }: { atendimento: Atendimento }) {
   const atualizar = useAtualizarAtendimento(atendimento.id);
-
-  function mudar(status: "Liberado" | "Cancelado") {
-    if (status === "Cancelado" && !window.confirm("Cancelar este atendimento? O crédito volta ao pacote, se houver.")) {
-      return;
-    }
-    atualizar.mutate({ status });
-  }
+  const [confirmando, setConfirmando] = useState(false);
 
   if (atendimento.status === "Cancelado") {
     return <span className="text-xs text-neutro">—</span>;
@@ -19,13 +15,31 @@ export function StatusAcao({ atendimento }: { atendimento: Atendimento }) {
   return (
     <div className="flex justify-end gap-2">
       {atendimento.status === "Pendente" && (
-        <Button variant="secondary" disabled={atualizar.isPending} onClick={() => mudar("Liberado")}>
+        <Button
+          variant="secondary"
+          disabled={atualizar.isPending}
+          onClick={() => atualizar.mutate({ status: "Liberado" })}
+        >
           Liberar
         </Button>
       )}
-      <Button variant="danger" disabled={atualizar.isPending} onClick={() => mudar("Cancelado")}>
+      <Button variant="danger" disabled={atualizar.isPending} onClick={() => setConfirmando(true)}>
         Cancelar atendimento
       </Button>
+
+      {/* Só o cancelamento confirma: liberar é reversível, cancelar mexe no saldo
+          do pacote (invariante 4). */}
+      <Confirmacao
+        aberto={confirmando}
+        titulo="Cancelar atendimento"
+        mensagem="Cancelar este atendimento? O crédito volta ao pacote, se houver."
+        rotuloConfirmar="Cancelar atendimento"
+        enviando={atualizar.isPending}
+        aoConfirmar={() =>
+          atualizar.mutate({ status: "Cancelado" }, { onSettled: () => setConfirmando(false) })
+        }
+        aoCancelar={() => setConfirmando(false)}
+      />
     </div>
   );
 }

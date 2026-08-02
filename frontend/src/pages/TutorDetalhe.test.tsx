@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -59,7 +59,6 @@ describe("TutorDetalhe", () => {
   });
 
   it("desativa o tutor após confirmar", async () => {
-    vi.stubGlobal("confirm", vi.fn(() => true));
     let deletado = false;
     server.use(
       http.get(`${BASE}/tutores/1/`, () => HttpResponse.json(TUTOR)),
@@ -74,12 +73,15 @@ describe("TutorDetalhe", () => {
 
     montar();
     await userEvent.click(await screen.findByRole("button", { name: "Desativar" }));
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Desativar" }),
+    );
 
     await waitFor(() => expect(deletado).toBe(true));
   });
 
-  it("não desativa se o usuário cancelar a confirmação", async () => {
-    vi.stubGlobal("confirm", vi.fn(() => false));
+  // Diálogo do app, não window.confirm: o nativo não aparecia no Firefox da Patricia.
+  it("não desativa se o usuário voltar na confirmação", async () => {
     let deletado = false;
     server.use(
       http.get(`${BASE}/tutores/1/`, () => HttpResponse.json(TUTOR)),
@@ -94,6 +96,9 @@ describe("TutorDetalhe", () => {
 
     montar();
     await userEvent.click(await screen.findByRole("button", { name: "Desativar" }));
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Voltar" }),
+    );
 
     expect(deletado).toBe(false);
   });

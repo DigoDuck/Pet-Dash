@@ -13,6 +13,7 @@ import { ErroAoCarregar } from "../ErroAoCarregar";
 import { EstadoVazio } from "../EstadoVazio";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
+import { Confirmacao } from "../ui/Confirmacao";
 import { Modal } from "../ui/Modal";
 import { Paginacao } from "../ui/Paginacao";
 import { Select } from "../ui/Select";
@@ -29,6 +30,7 @@ export function CustosSecao({ mes }: { mes: string }) {
   const [pagina, setPagina] = useState(1);
   const [criando, setCriando] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Custo | null>(null);
+  const [aExcluir, setAExcluir] = useState<Custo | null>(null);
 
   const { data, isPending, isError, refetch } = useCustos(inicioDaCompetencia(mes), tipo, pagina);
   const criar = useCriarCusto();
@@ -114,16 +116,7 @@ export function CustosSecao({ mes }: { mes: string }) {
                           <Button
                             variant="danger"
                             disabled={excluir.isPending}
-                            onClick={() => {
-                              // Hard-delete: Custo não tem soft-delete, a linha some
-                              // e o fechamento do mês muda. Confirmar é o mínimo.
-                              if (
-                                window.confirm(
-                                  "Excluir este custo? A exclusão é permanente e altera o fechamento do mês.",
-                                )
-                              )
-                                excluir.mutate(custo.id);
-                            }}
+                            onClick={() => setAExcluir(custo)}
                           >
                             Excluir
                           </Button>
@@ -151,6 +144,22 @@ export function CustosSecao({ mes }: { mes: string }) {
 
       {emEdicao && (
         <ModalEdicao custo={emEdicao} mes={mes} aoFechar={() => setEmEdicao(null)} />
+      )}
+
+      {/* Hard-delete: Custo não tem soft-delete, a linha some e o fechamento do
+          mês muda. */}
+      {aExcluir && (
+        <Confirmacao
+          aberto
+          titulo="Excluir custo"
+          mensagem={`Excluir "${aExcluir.descricao}"? A exclusão é permanente e altera o fechamento do mês.`}
+          rotuloConfirmar="Excluir"
+          enviando={excluir.isPending}
+          aoConfirmar={() =>
+            excluir.mutate(aExcluir.id, { onSettled: () => setAExcluir(null) })
+          }
+          aoCancelar={() => setAExcluir(null)}
+        />
       )}
     </section>
   );
