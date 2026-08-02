@@ -6,6 +6,7 @@ import { BadgesPet } from "../components/clientes/BadgesPet";
 import { HistoricoTabela } from "../components/clientes/HistoricoTabela";
 import { PetForm } from "../components/clientes/PetForm";
 import { Button } from "../components/ui/Button";
+import { Confirmacao } from "../components/ui/Confirmacao";
 import { Modal } from "../components/ui/Modal";
 import { Paginacao } from "../components/ui/Paginacao";
 import { useAtendimentosDoPet } from "../hooks/useAtendimentos";
@@ -18,6 +19,7 @@ export function PetDetalhe() {
   const navigate = useNavigate();
   const [pagina, setPagina] = useState(1);
   const [editando, setEditando] = useState(false);
+  const [desativando, setDesativando] = useState(false);
 
   const pet = usePet(petId);
   const historico = useAtendimentosDoPet(petId, pagina);
@@ -32,7 +34,6 @@ export function PetDetalhe() {
   const tutorDoPet = pet.data.tutor;
 
   function aoDesativar() {
-    if (!window.confirm("Desativar este pet? Ele sai das listas, mas o histórico fica.")) return;
     desativar.mutate(petId, { onSuccess: () => navigate(`/clientes/${tutorDoPet}`) });
   }
 
@@ -64,7 +65,11 @@ export function PetDetalhe() {
           <Button variant="secondary" onClick={() => setEditando(true)}>
             Editar
           </Button>
-          <Button variant="danger" onClick={aoDesativar} disabled={desativar.isPending}>
+          <Button
+            variant="danger"
+            onClick={() => setDesativando(true)}
+            disabled={desativar.isPending}
+          >
             Desativar
           </Button>
         </div>
@@ -106,6 +111,16 @@ export function PetDetalhe() {
           aoSalvar={(dados) => atualizar.mutate(dados, { onSuccess: () => setEditando(false) })}
         />
       </Modal>
+
+      <Confirmacao
+        aberto={desativando}
+        titulo="Desativar pet"
+        mensagem="Desativar este pet? Ele sai das listas, mas o histórico fica."
+        rotuloConfirmar="Desativar"
+        enviando={desativar.isPending}
+        aoConfirmar={aoDesativar}
+        aoCancelar={() => setDesativando(false)}
+      />
     </div>
   );
 }

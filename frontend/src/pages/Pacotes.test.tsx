@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -156,6 +156,9 @@ describe("Pacotes", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
+  // A confirmação é um diálogo do app, não window.confirm: o nativo não aparecia no
+  // Firefox da Patricia e, quando o navegador o suprime, confirm() devolve false —
+  // o botão Excluir virava um botão que não faz nada, sem diálogo e sem erro.
   it("excluir a venda pede confirmação antes de chamar o DELETE", async () => {
     const chamadas: string[] = [];
     server.use(
@@ -165,20 +168,22 @@ describe("Pacotes", () => {
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    const confirmar = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     renderizar();
     await screen.findByText("Luna");
     await userEvent.click(screen.getByRole("button", { name: "Excluir" }));
 
-    expect(confirmar).toHaveBeenCalled();
+    const dialogo = await screen.findByRole("dialog");
+    expect(dialogo).toHaveTextContent("Luna");
+    await userEvent.click(within(dialogo).getByRole("button", { name: "Voltar" }));
     expect(chamadas).toEqual([]);
 
-    confirmar.mockReturnValue(true);
     await userEvent.click(screen.getByRole("button", { name: "Excluir" }));
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Excluir" }),
+    );
 
     await waitFor(() => expect(chamadas).toEqual(["1"]));
-    confirmar.mockRestore();
   });
 
   // Sem isto o botão parece quebrado: a linha continua na tela e nada explica por quê.
@@ -192,15 +197,15 @@ describe("Pacotes", () => {
         ),
       ),
     );
-    const confirmar = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     renderizar();
     await screen.findByText("Luna");
     await userEvent.click(screen.getByRole("button", { name: "Excluir" }));
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Excluir" }),
+    );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Este pacote já tem atendimento vinculado",
     );
-    confirmar.mockRestore();
   });
 });

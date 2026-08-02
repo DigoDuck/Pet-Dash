@@ -5,6 +5,7 @@ import { ServicoForm } from "../components/servicos/ServicoForm";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Checkbox } from "../components/ui/Checkbox";
+import { Confirmacao } from "../components/ui/Confirmacao";
 import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { Paginacao } from "../components/ui/Paginacao";
@@ -139,18 +140,30 @@ export function Servicos() {
 
 function AlternarAtivo({ servico }: { servico: Servico }) {
   const atualizar = useAtualizarServico(servico.id);
+  const [desativando, setDesativando] = useState(false);
   if (servico.ativo) {
     return (
-      <Button
-        variant="danger"
-        disabled={atualizar.isPending}
-        onClick={() => {
-          if (window.confirm("Desativar este serviço? Ele sai do catálogo, mas o histórico fica."))
-            atualizar.mutate({ ativo: false });
-        }}
-      >
-        Desativar
-      </Button>
+      <>
+        <Button
+          variant="danger"
+          disabled={atualizar.isPending}
+          onClick={() => setDesativando(true)}
+        >
+          Desativar
+        </Button>
+        {/* Só desativar confirma: reativar não tira nada do catálogo. */}
+        <Confirmacao
+          aberto={desativando}
+          titulo="Desativar serviço"
+          mensagem="Desativar este serviço? Ele sai do catálogo, mas o histórico fica."
+          rotuloConfirmar="Desativar"
+          enviando={atualizar.isPending}
+          aoConfirmar={() =>
+            atualizar.mutate({ ativo: false }, { onSettled: () => setDesativando(false) })
+          }
+          aoCancelar={() => setDesativando(false)}
+        />
+      </>
     );
   }
   return (

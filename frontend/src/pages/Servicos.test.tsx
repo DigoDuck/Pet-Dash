@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -78,8 +78,7 @@ describe("Servicos", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
-  it("desativa um serviço com PATCH ativo:false", async () => {
-    vi.stubGlobal("confirm", vi.fn(() => true));
+  it("desativa um serviço com PATCH ativo:false após confirmar no diálogo", async () => {
     let corpo: Record<string, unknown> | null = null;
     server.use(
       http.get(`${BASE}/servicos/`, () => HttpResponse.json(paginado([servico()]))),
@@ -93,6 +92,10 @@ describe("Servicos", () => {
     await screen.findByText("Banho");
 
     await userEvent.click(screen.getByRole("button", { name: "Desativar" }));
+    expect(corpo).toBeNull();
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Desativar" }),
+    );
 
     await waitFor(() => expect(corpo).toEqual({ ativo: false }));
   });

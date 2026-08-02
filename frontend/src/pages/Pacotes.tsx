@@ -4,6 +4,7 @@ import { EstadoVazio } from "../components/EstadoVazio";
 import { PacoteForm } from "../components/pacotes/PacoteForm";
 import { SaldoBadge } from "../components/pacotes/SaldoBadge";
 import { Button } from "../components/ui/Button";
+import { Confirmacao } from "../components/ui/Confirmacao";
 import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { Paginacao } from "../components/ui/Paginacao";
@@ -26,6 +27,7 @@ export function Pacotes() {
   const [pagina, setPagina] = useState(1);
   const [vendendo, setVendendo] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Pacote | null>(null);
+  const [aExcluir, setAExcluir] = useState<Pacote | null>(null);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -140,16 +142,7 @@ export function Pacotes() {
                           <Button
                             variant="danger"
                             disabled={excluir.isPending}
-                            onClick={() => {
-                              // A venda É faturamento (regime de caixa): apagar mexe
-                              // no caixa do mês da compra. Confirmar é o mínimo.
-                              if (
-                                window.confirm(
-                                  `Excluir a venda do pacote de ${p.pet_nome}? A exclusão é permanente e tira ${formatarPreco(p.valor_pago)} do faturamento.`,
-                                )
-                              )
-                                excluir.mutate(p.id);
-                            }}
+                            onClick={() => setAExcluir(p)}
                           >
                             Excluir
                           </Button>
@@ -175,6 +168,23 @@ export function Pacotes() {
       </Modal>
 
       {emEdicao && <ModalEdicao pacote={emEdicao} aoFechar={() => setEmEdicao(null)} />}
+
+      {/* A venda É faturamento (regime de caixa): apagar mexe no caixa do mês da
+          compra. onSettled e não onSuccess — no 400 o diálogo sai de cena e a
+          recusa aparece no alerta acima da tabela. */}
+      {aExcluir && (
+        <Confirmacao
+          aberto
+          titulo="Excluir venda de pacote"
+          mensagem={`Excluir a venda do pacote de ${aExcluir.pet_nome}? A exclusão é permanente e tira ${formatarPreco(aExcluir.valor_pago)} do faturamento.`}
+          rotuloConfirmar="Excluir"
+          enviando={excluir.isPending}
+          aoConfirmar={() =>
+            excluir.mutate(aExcluir.id, { onSettled: () => setAExcluir(null) })
+          }
+          aoCancelar={() => setAExcluir(null)}
+        />
+      )}
     </div>
   );
 }
