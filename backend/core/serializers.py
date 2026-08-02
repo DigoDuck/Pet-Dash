@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from rest_framework import serializers
@@ -86,6 +87,25 @@ class PacoteContratadoSerializer(serializers.ModelSerializer):
         if servico is not None and not servico.is_pacote:
             raise serializers.ValidationError(
                 {"servico": ["Este serviço não é um pacote. Marque 'é pacote?' no catálogo."]}
+            )
+
+        # A data da compra é o que joga a venda num mês do caixa (invariante 1: o
+        # faturamento soma valor_pago por data_compra). Um dedo trocado aqui move
+        # R$ 350 de um mês para o outro sem nenhum sinal na tela — foi o que
+        # aconteceu com o pacote de julho da Luma, gravado com compra em 10/08.
+        #
+        # Regime de caixa não fatura dinheiro que ainda não entrou: compra no futuro
+        # é sempre erro de digitação. Vale no POST e no PATCH — na venda da Luma a
+        # data errada só apareceu um mês depois, no feed do dashboard.
+        #
+        # A checagem irmã ("compra não pode ser posterior à validade") ficou de fora
+        # de propósito: ela travaria o reagendamento (invariante 5) de toda linha que
+        # JÁ está nesse estado, incluindo a da Luma, que é exatamente a que precisa
+        # ser editada agora. Vale reconsiderar depois que o histórico estiver limpo.
+        data_compra = attrs.get("data_compra", getattr(self.instance, "data_compra", None))
+        if data_compra and data_compra > date.today():
+            raise serializers.ValidationError(
+                {"data_compra": ["A data da compra não pode estar no futuro."]}
             )
 
         pet = attrs.get("pet", getattr(self.instance, "pet", None))

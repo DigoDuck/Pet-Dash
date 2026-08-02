@@ -8,7 +8,12 @@ import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { Paginacao } from "../components/ui/Paginacao";
 import { SeletorMes } from "../components/ui/SeletorMes";
-import { useAtualizarPacote, useCriarPacote, usePacotes } from "../hooks/usePacotes";
+import {
+  useAtualizarPacote,
+  useCriarPacote,
+  useExcluirPacote,
+  usePacotes,
+} from "../hooks/usePacotes";
 import { mensagemDeErro } from "../lib/api";
 import { formatarData, inicioDaCompetencia, mesCorrente } from "../lib/competencia";
 import { formatarPreco } from "../lib/formato";
@@ -36,6 +41,7 @@ export function Pacotes() {
     pagina,
   );
   const criar = useCriarPacote();
+  const excluir = useExcluirPacote();
 
   function fecharVenda() {
     setVendendo(false);
@@ -68,6 +74,14 @@ export function Pacotes() {
           />
         </div>
       </div>
+
+      {/* O 400 da exclusão ("já tem atendimento vinculado") é a única forma de a
+          Patricia descobrir o que fazer; engolido, o botão só pareceria quebrado. */}
+      {excluir.isError && (
+        <p role="alert" className="mt-4 rounded-lg bg-erro/10 px-3 py-2 text-sm text-erro">
+          {mensagemDeErro(excluir.error)}
+        </p>
+      )}
 
       <div className="mt-6">
         {isError ? (
@@ -119,9 +133,25 @@ export function Pacotes() {
                       </td>
                       <td className="px-2 py-4 font-mono text-neutro">{formatarData(p.validade)}</td>
                       <td className="px-6 py-4">
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-2">
                           <Button variant="ghost" onClick={() => setEmEdicao(p)}>
                             Editar
+                          </Button>
+                          <Button
+                            variant="danger"
+                            disabled={excluir.isPending}
+                            onClick={() => {
+                              // A venda É faturamento (regime de caixa): apagar mexe
+                              // no caixa do mês da compra. Confirmar é o mínimo.
+                              if (
+                                window.confirm(
+                                  `Excluir a venda do pacote de ${p.pet_nome}? A exclusão é permanente e tira ${formatarPreco(p.valor_pago)} do faturamento.`,
+                                )
+                              )
+                                excluir.mutate(p.id);
+                            }}
+                          >
+                            Excluir
                           </Button>
                         </div>
                       </td>

@@ -144,6 +144,7 @@ describe("Financeiro", () => {
     await screen.findByText("Aluguel");
 
     fireEvent.change(screen.getByLabelText("Mês"), { target: { value: "" } });
+    fireEvent.blur(screen.getByLabelText("Mês"));
 
     expect(screen.getByLabelText("Mês")).toHaveValue("2026-07");
     expect(screen.getByText("Aluguel")).toBeInTheDocument();

@@ -81,15 +81,18 @@ export function mesCurto(competencia: string): string {
   return MESES_CURTOS[Number(competencia.slice(5, 7)) - 1];
 }
 
-/** Os `n` meses que terminam em `mes`, em ordem cronológica.
- *  mesesAnteriores("2026-02", 6) -> ["2025-09", ..., "2026-02"].
+/** "2026-08" + (-1) -> "2026-07". Negativo anda para trás.
  *
- *  Date.UTC absorve a virada de ano (mês -1 vira dezembro do ano anterior sozinho)
+ *  Date.UTC absorve a virada de ano (mês 0 vira dezembro do ano anterior sozinho)
  *  e evita o retrocesso de um dia que o construtor local causa à noite em -03. */
-export function mesesAnteriores(mes: string, n: number): string[] {
+export function somarMeses(mes: string, n: number): string {
   const [ano, m] = mes.split("-").map(Number);
-  return Array.from({ length: n }, (_, i) => {
-    const data = new Date(Date.UTC(ano, m - 1 - (n - 1 - i), 1));
-    return `${data.getUTCFullYear()}-${String(data.getUTCMonth() + 1).padStart(2, "0")}`;
-  });
+  const data = new Date(Date.UTC(ano, m - 1 + n, 1));
+  return `${data.getUTCFullYear()}-${String(data.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Os `n` meses que terminam em `mes`, em ordem cronológica.
+ *  mesesAnteriores("2026-02", 6) -> ["2025-09", ..., "2026-02"]. */
+export function mesesAnteriores(mes: string, n: number): string[] {
+  return Array.from({ length: n }, (_, i) => somarMeses(mes, i - (n - 1)));
 }

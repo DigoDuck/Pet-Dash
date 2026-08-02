@@ -1,8 +1,9 @@
 from datetime import date
 
+from django.db.models import ProtectedError
 from rest_framework import viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.exceptions import ParseError
+from rest_framework.exceptions import ParseError, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -94,6 +95,27 @@ class PacoteContratadoViewSet(viewsets.ModelViewSet):
         .select_related("pet", "pet__tutor", "servico")
         .order_by("-competencia", "pet__nome")
     )
+
+    def perform_destroy(self, instance):
+        """Hard-delete, e só enquanto a venda não tiver nenhum atendimento vinculado.
+
+        Hard e não soft (`ativo=False`) porque o faturamento soma `valor_pago` sem
+        olhar o `ativo`: desativar deixaria a venda errada dentro do caixa, que é
+        justamente o que a exclusão existe para resolver.
+
+        Quem decide se dá para excluir é o PROTECT do Atendimento, não uma segunda
+        cópia da regra aqui — e o PROTECT conta o atendimento CANCELADO também.
+        Sem o except, o ProtectedError virava 500 na cara da Patricia; com ele, vira
+        400 explicando o que fazer. Apagar a venda mantendo os banhos seria pior que
+        o 500: transformaria consumo de pacote em serviço que ninguém pagou.
+        """
+        try:
+            instance.delete()
+        except ProtectedError as erro:
+            raise ValidationError(
+                "Este pacote já tem atendimento vinculado (cancelado também conta). "
+                "Corrija ou exclua os atendimentos antes de excluir a venda."
+            ) from erro
 
 
 class CustoViewSet(viewsets.ModelViewSet):

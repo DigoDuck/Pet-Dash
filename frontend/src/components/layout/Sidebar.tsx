@@ -70,8 +70,12 @@ function GrupoNav({ titulo, itens }: { titulo: string; itens: ItemNav[] }) {
 
 export function Sidebar() {
   const navigate = useNavigate();
+  // `sticky top-0 h-screen` e não `fixed`: a sidebar continua ocupando a coluna do
+  // flex do AppShell, então o conteúdo não precisa de margem compensatória. O
+  // h-screen é o que a prende — sem altura própria ela acompanhava o scroll da
+  // página. `shrink-0` para o menu nunca ser espremido por uma tabela larga.
   return (
-    <aside className="flex w-[260px] flex-col border-r border-escuro-suave bg-escuro text-creme">
+    <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-r border-escuro-suave bg-escuro text-creme">
       <div className="flex items-center gap-3 border-b border-escuro-suave px-6 py-6">
         {/* A logo é dourada: sempre dentro de um container marsala, nunca em fundo claro. */}
         <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-marsala">
