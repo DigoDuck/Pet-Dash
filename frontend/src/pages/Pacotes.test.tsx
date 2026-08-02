@@ -100,6 +100,7 @@ describe("Pacotes", () => {
     await screen.findByText("Luna");
 
     fireEvent.change(screen.getByLabelText("Mês"), { target: { value: "" } });
+    fireEvent.blur(screen.getByLabelText("Mês"));
 
     expect(urls.every((u) => u.includes("competencia=2026-07-01"))).toBe(true);
     expect(screen.getByLabelText("Mês")).toHaveValue("2026-07");
@@ -153,5 +154,53 @@ describe("Pacotes", () => {
       await screen.findByText("Já existe um pacote para este pet nesta competência."),
     ).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("excluir a venda pede confirmação antes de chamar o DELETE", async () => {
+    const chamadas: string[] = [];
+    server.use(
+      http.get(`${BASE}/pacotes/`, () => HttpResponse.json(paginado([pacote()]))),
+      http.delete(`${BASE}/pacotes/:id`, ({ params }) => {
+        chamadas.push(String(params.id));
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const confirmar = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    renderizar();
+    await screen.findByText("Luna");
+    await userEvent.click(screen.getByRole("button", { name: "Excluir" }));
+
+    expect(confirmar).toHaveBeenCalled();
+    expect(chamadas).toEqual([]);
+
+    confirmar.mockReturnValue(true);
+    await userEvent.click(screen.getByRole("button", { name: "Excluir" }));
+
+    await waitFor(() => expect(chamadas).toEqual(["1"]));
+    confirmar.mockRestore();
+  });
+
+  // Sem isto o botão parece quebrado: a linha continua na tela e nada explica por quê.
+  it("mostra o motivo quando o backend recusa a exclusão", async () => {
+    server.use(
+      http.get(`${BASE}/pacotes/`, () => HttpResponse.json(paginado([pacote()]))),
+      http.delete(`${BASE}/pacotes/:id`, () =>
+        HttpResponse.json(
+          ["Este pacote já tem atendimento vinculado (cancelado também conta)."],
+          { status: 400 },
+        ),
+      ),
+    );
+    const confirmar = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    renderizar();
+    await screen.findByText("Luna");
+    await userEvent.click(screen.getByRole("button", { name: "Excluir" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Este pacote já tem atendimento vinculado",
+    );
+    confirmar.mockRestore();
   });
 });

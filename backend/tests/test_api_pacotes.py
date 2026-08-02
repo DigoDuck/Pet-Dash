@@ -109,6 +109,94 @@ def test_patch_parcial_nao_revalida_servico_herdado(api):
     assert resp.json()["validade"] == "2026-07-05"
 
 
+def test_compra_no_futuro_da_400(api):
+    """O bug da Luma: pacote de julho gravado com compra em 10/08.
+
+    O faturamento soma valor_pago por data_compra (invariante 1), então a venda
+    inteira pulou para o caixa do mês seguinte sem nenhum sinal na tela.
+    """
+    from datetime import timedelta
+
+    from tests.factories import PetFactory, ServicoFactory
+
+    pet = PetFactory()
+    servico = ServicoFactory(is_pacote=True, creditos=4)
+    amanha = date.today() + timedelta(days=1)
+    payload = {
+        "pet": pet.id, "servico": servico.id, "competencia": "2026-06-01",
+        "qtd_total": 4, "valor_pago": "350.00", "data_compra": amanha.isoformat(),
+        "validade": "2026-06-30",
+    }
+
+    resp = api.post("/api/pacotes/", payload, format="json")
+
+    assert resp.status_code == 400
+    assert "data_compra" in resp.json()
+
+
+def test_patch_com_compra_no_futuro_da_400(api):
+    """A venda errada nasce tanto no POST quanto na edição."""
+    from datetime import timedelta
+
+    from tests.factories import PacoteContratadoFactory
+
+    pacote = PacoteContratadoFactory(competencia=date(2026, 6, 1))
+    amanha = date.today() + timedelta(days=1)
+
+    resp = api.patch(
+        f"/api/pacotes/{pacote.id}/", {"data_compra": amanha.isoformat()}, format="json"
+    )
+
+    assert resp.status_code == 400
+
+
+def test_corrigir_data_de_compra_para_o_passado_funciona(api):
+    """O conserto da linha da Luma: mover a compra de volta para o mês certo."""
+    from tests.factories import PacoteContratadoFactory
+
+    pacote = PacoteContratadoFactory(competencia=date(2026, 6, 1))
+
+    resp = api.patch(
+        f"/api/pacotes/{pacote.id}/", {"data_compra": "2026-06-10"}, format="json"
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["data_compra"] == "2026-06-10"
+
+
+def test_exclui_venda_sem_atendimento(api):
+    """Vendeu errado e ninguém consumiu: a linha some do caixa."""
+    from core.models import PacoteContratado
+    from tests.factories import PacoteContratadoFactory
+
+    pacote = PacoteContratadoFactory(competencia=date(2026, 6, 1))
+
+    resp = api.delete(f"/api/pacotes/{pacote.id}/")
+
+    assert resp.status_code == 204
+    assert not PacoteContratado.objects.filter(id=pacote.id).exists()
+
+
+@pytest.mark.parametrize("status", ["Liberado", "Pendente", "Cancelado"])
+def test_excluir_venda_com_atendimento_da_400_e_nao_500(api, status):
+    """O PROTECT do Atendimento conta o CANCELADO também.
+
+    Sem o except no perform_destroy isto era ProtectedError, ou seja, 500. E apagar
+    a venda mantendo os banhos transformaria consumo de pacote em serviço que
+    ninguém pagou.
+    """
+    from core.models import PacoteContratado
+    from tests.factories import AtendimentoFactory, PacoteContratadoFactory
+
+    pacote = PacoteContratadoFactory(competencia=date(2026, 6, 1))
+    AtendimentoFactory(pet=pacote.pet, pacote=pacote, status=status)
+
+    resp = api.delete(f"/api/pacotes/{pacote.id}/")
+
+    assert resp.status_code == 400
+    assert PacoteContratado.objects.filter(id=pacote.id).exists()
+
+
 def test_busca_pacote_pelo_nome_do_pet(api):
     from tests.factories import PacoteContratadoFactory, PetFactory
 

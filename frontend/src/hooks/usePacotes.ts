@@ -41,6 +41,17 @@ export function useCriarPacote() {
   });
 }
 
+// Hard-delete, e o backend recusa com 400 quando há atendimento vinculado (o
+// PROTECT conta o cancelado também). A venda É faturamento pelo regime de caixa,
+// então a exclusão precisa invalidar o dashboard junto — daí o invalidarPacotes.
+export function useExcluirPacote() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => request<null>(`/pacotes/${id}/`, { method: "DELETE" }),
+    onSuccess: () => invalidarPacotes(client),
+  });
+}
+
 export function useAtualizarPacote(id: number) {
   const client = useQueryClient();
   return useMutation({
