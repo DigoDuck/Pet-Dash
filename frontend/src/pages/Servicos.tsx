@@ -10,6 +10,7 @@ import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { Paginacao } from "../components/ui/Paginacao";
 import { useAtualizarServico, useCriarServico, useServicos } from "../hooks/useServicos";
+import { mensagemDeErro } from "../lib/api";
 import { formatarPreco } from "../lib/formato";
 import type { Servico } from "../lib/types";
 
@@ -158,8 +159,9 @@ function AlternarAtivo({ servico }: { servico: Servico }) {
           mensagem="Desativar este serviço? Ele sai do catálogo, mas o histórico fica."
           rotuloConfirmar="Desativar"
           enviando={atualizar.isPending}
+          erro={atualizar.isError ? mensagemDeErro(atualizar.error) : undefined}
           aoConfirmar={() =>
-            atualizar.mutate({ ativo: false }, { onSettled: () => setDesativando(false) })
+            atualizar.mutate({ ativo: false }, { onSuccess: () => setDesativando(false) })
           }
           aoCancelar={() => setDesativando(false)}
         />

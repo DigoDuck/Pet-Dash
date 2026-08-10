@@ -9,6 +9,7 @@ import { Button } from "../components/ui/Button";
 import { Confirmacao } from "../components/ui/Confirmacao";
 import { Modal } from "../components/ui/Modal";
 import { useCriarPet, usePetsDoTutor } from "../hooks/usePets";
+import { mensagemDeErro } from "../lib/api";
 import { useAtualizarTutor, useDesativarTutor, useTutor } from "../hooks/useTutores";
 
 export function TutorDetalhe() {
@@ -110,12 +111,16 @@ export function TutorDetalhe() {
         />
       </Modal>
 
+      {/* Só navega no onSuccess, então uma falha deixa o diálogo aberto. Sem o `erro`
+          o botão voltava de "Aguarde..." para "Desativar" e mais nada acontecia: a
+          tela ficava idêntica a um clique que nunca foi registrado. */}
       <Confirmacao
         aberto={desativando}
         titulo="Desativar tutor"
         mensagem="Desativar este tutor? Ele sai das listas, mas o histórico fica."
         rotuloConfirmar="Desativar"
         enviando={desativar.isPending}
+        erro={desativar.isError ? mensagemDeErro(desativar.error) : undefined}
         aoConfirmar={aoDesativar}
         aoCancelar={() => setDesativando(false)}
       />

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Atendimento } from "../../lib/types";
 import { useAtualizarAtendimento } from "../../hooks/useAtendimentos";
+import { mensagemDeErro } from "../../lib/api";
 import { Button } from "../ui/Button";
 import { Confirmacao } from "../ui/Confirmacao";
 
@@ -35,8 +36,9 @@ export function StatusAcao({ atendimento }: { atendimento: Atendimento }) {
         mensagem="Cancelar este atendimento? O crédito volta ao pacote, se houver."
         rotuloConfirmar="Cancelar atendimento"
         enviando={atualizar.isPending}
+        erro={atualizar.isError ? mensagemDeErro(atualizar.error) : undefined}
         aoConfirmar={() =>
-          atualizar.mutate({ status: "Cancelado" }, { onSettled: () => setConfirmando(false) })
+          atualizar.mutate({ status: "Cancelado" }, { onSuccess: () => setConfirmando(false) })
         }
         aoCancelar={() => setConfirmando(false)}
       />

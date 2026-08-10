@@ -11,6 +11,7 @@ import { Modal } from "../components/ui/Modal";
 import { Paginacao } from "../components/ui/Paginacao";
 import { useAtendimentosDoPet } from "../hooks/useAtendimentos";
 import { useAtualizarPet, useDesativarPet, usePet } from "../hooks/usePets";
+import { mensagemDeErro } from "../lib/api";
 import { ROTULOS_PORTE } from "../lib/types";
 
 export function PetDetalhe() {
@@ -112,12 +113,15 @@ export function PetDetalhe() {
         />
       </Modal>
 
+      {/* Só navega no onSuccess, então uma falha deixa o diálogo aberto. Sem o `erro`
+          a tela ficava idêntica a um clique que nunca foi registrado. */}
       <Confirmacao
         aberto={desativando}
         titulo="Desativar pet"
         mensagem="Desativar este pet? Ele sai das listas, mas o histórico fica."
         rotuloConfirmar="Desativar"
         enviando={desativar.isPending}
+        erro={desativar.isError ? mensagemDeErro(desativar.error) : undefined}
         aoConfirmar={aoDesativar}
         aoCancelar={() => setDesativando(false)}
       />
