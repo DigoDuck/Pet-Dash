@@ -1,6 +1,10 @@
 from datetime import date
 
 from django.db.models import ProtectedError
+
+# localdate() respeita o TIME_ZONE do settings; date.today() lê o relógio do sistema,
+# que no container do Railway é UTC e vira o dia às 21h em Salvador.
+from django.utils.timezone import localdate
 from rest_framework import viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ParseError, ValidationError
@@ -49,7 +53,7 @@ class PetViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = models.Pet.objects.filter(ativo=True).select_related("tutor").order_by("nome")
-        return services.anota_vip(qs, date.today())
+        return services.anota_vip(qs, localdate())
 
     def perform_destroy(self, instance):
         instance.ativo = False
@@ -67,7 +71,7 @@ class PetViewSet(viewsets.ModelViewSet):
                 # então o caminho deixou de ser hipotético.
                 raise ParseError("Data inválida; use o formato YYYY-MM-DD.") from erro
         else:
-            competencia = date.today().replace(day=1)
+            competencia = localdate().replace(day=1)
 
         pacote = models.PacoteContratado.objects.filter(
             pet_id=pk, competencia=competencia, ativo=True
@@ -198,7 +202,7 @@ class AtendimentoViewSet(viewsets.ModelViewSet):
             .prefetch_related("pagamentos")
             .order_by("-data", "-horario")
         )
-        return services.anota_vip_do_pet(qs, date.today())
+        return services.anota_vip_do_pet(qs, localdate())
 
     # O objeto salvo não passa pelo get_queryset() anotado (POST) ou carrega a
     # anotação de ANTES do save (PATCH que muda status podia cruzar o limiar VIP

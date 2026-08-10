@@ -49,4 +49,20 @@ describe("Confirmacao", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  // A recusa do backend precisa aparecer onde ela clicou, e com role="alert" para o
+  // leitor de tela anunciar sem que ela precise procurar.
+  it("mostra a recusa da ação dentro do diálogo", () => {
+    montar({ erro: "Este pacote já tem atendimento vinculado." });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Este pacote já tem atendimento vinculado.",
+    );
+  });
+
+  it("sem erro não sobra alerta na tela", () => {
+    montar();
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 });

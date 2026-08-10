@@ -155,8 +155,9 @@ export function CustosSecao({ mes }: { mes: string }) {
           mensagem={`Excluir "${aExcluir.descricao}"? A exclusão é permanente e altera o fechamento do mês.`}
           rotuloConfirmar="Excluir"
           enviando={excluir.isPending}
+          erro={excluir.isError ? mensagemDeErro(excluir.error) : undefined}
           aoConfirmar={() =>
-            excluir.mutate(aExcluir.id, { onSettled: () => setAExcluir(null) })
+            excluir.mutate(aExcluir.id, { onSuccess: () => setAExcluir(null) })
           }
           aoCancelar={() => setAExcluir(null)}
         />
