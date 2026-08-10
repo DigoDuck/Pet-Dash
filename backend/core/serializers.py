@@ -1,6 +1,6 @@
-from datetime import date
 from decimal import Decimal
 
+from django.utils.timezone import localdate
 from rest_framework import serializers
 
 from . import models, services
@@ -102,8 +102,12 @@ class PacoteContratadoSerializer(serializers.ModelSerializer):
         # de propósito: ela travaria o reagendamento (invariante 5) de toda linha que
         # JÁ está nesse estado, incluindo a da Luma, que é exatamente a que precisa
         # ser editada agora. Vale reconsiderar depois que o histórico estiver limpo.
+        #
+        # `localdate()` e não `date.today()`: o today() lê o relógio do sistema, e o
+        # container do Railway roda em UTC. Entre 21h e meia-noite em Salvador o UTC
+        # já virou o dia seguinte, e a checagem aceitava calado uma compra de amanhã.
         data_compra = attrs.get("data_compra", getattr(self.instance, "data_compra", None))
-        if data_compra and data_compra > date.today():
+        if data_compra and data_compra > localdate():
             raise serializers.ValidationError(
                 {"data_compra": ["A data da compra não pode estar no futuro."]}
             )

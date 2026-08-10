@@ -134,6 +134,41 @@ def test_compra_no_futuro_da_400(api):
     assert "data_compra" in resp.json()
 
 
+def test_hoje_da_venda_sai_do_fuso_do_django_e_nao_do_relogio_do_servidor(api, monkeypatch):
+    """`localdate()`, não `date.today()`.
+
+    O today() lê o relógio do sistema, e o container do Railway roda em UTC. Entre
+    21h e meia-noite em Salvador o UTC já é o dia seguinte, então uma compra lançada
+    com a data de amanhã passava batida — e ia parar no caixa do mês errado quando a
+    virada de dia era também virada de mês (invariante 1).
+
+    Congelar o `localdate` do serializer é o que torna isso determinístico: se alguém
+    trocar a chamada de volta por `date.today()`, este patch deixa de ter efeito e o
+    teste cai.
+    """
+    from tests.factories import PetFactory, ServicoFactory
+
+    monkeypatch.setattr("core.serializers.localdate", lambda: date(2026, 6, 15))
+    pet = PetFactory()
+    servico = ServicoFactory(is_pacote=True, creditos=4)
+    payload = {
+        "pet": pet.id, "servico": servico.id, "competencia": "2026-06-01",
+        "qtd_total": 4, "valor_pago": "350.00", "validade": "2026-06-30",
+    }
+
+    de_amanha = api.post(
+        "/api/pacotes/", {**payload, "data_compra": "2026-06-16"}, format="json"
+    )
+    de_hoje = api.post(
+        "/api/pacotes/", {**payload, "data_compra": "2026-06-15"}, format="json"
+    )
+
+    assert de_amanha.status_code == 400
+    assert "data_compra" in de_amanha.json()
+    # A venda do próprio dia é o caso normal: o limite é "futuro", não "hoje".
+    assert de_hoje.status_code == 201
+
+
 def test_patch_com_compra_no_futuro_da_400(api):
     """A venda errada nasce tanto no POST quanto na edição."""
     from datetime import timedelta
