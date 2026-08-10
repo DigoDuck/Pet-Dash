@@ -187,7 +187,9 @@ describe("Pacotes", () => {
   });
 
   // Sem isto o botão parece quebrado: a linha continua na tela e nada explica por quê.
-  it("mostra o motivo quando o backend recusa a exclusão", async () => {
+  // O motivo fica DENTRO do diálogo, e o diálogo fica de pé: fora dele o alerta
+  // sobrevive à ação que o gerou e vira erro vermelho sobre coisa nenhuma.
+  it("recusa da exclusão mantém o diálogo aberto com o motivo", async () => {
     server.use(
       http.get(`${BASE}/pacotes/`, () => HttpResponse.json(paginado([pacote()]))),
       http.delete(`${BASE}/pacotes/:id`, () =>
@@ -204,8 +206,40 @@ describe("Pacotes", () => {
       within(await screen.findByRole("dialog")).getByRole("button", { name: "Excluir" }),
     );
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).getByRole("alert")).toHaveTextContent(
       "Este pacote já tem atendimento vinculado",
     );
+  });
+
+  // O erro de uma venda não pode encardir o diálogo da próxima: sem o reset() ela
+  // abriria a exclusão de outra linha já acusando um vínculo que essa linha não tem.
+  it("erro de uma exclusão não vaza para o diálogo da venda seguinte", async () => {
+    server.use(
+      http.get(`${BASE}/pacotes/`, () =>
+        HttpResponse.json(paginado([pacote(), pacote({ id: 2, pet: 8, pet_nome: "Thor" })])),
+      ),
+      http.delete(`${BASE}/pacotes/1`, () =>
+        HttpResponse.json(["Este pacote já tem atendimento vinculado."], { status: 400 }),
+      ),
+    );
+    renderizar();
+    await screen.findByText("Luna");
+
+    const [excluirLuna, excluirThor] = screen.getAllByRole("button", { name: "Excluir" });
+    await userEvent.click(excluirLuna);
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Excluir" }),
+    );
+    await screen.findByRole("alert");
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Voltar" }),
+    );
+
+    await userEvent.click(excluirThor);
+
+    const dialogo = await screen.findByRole("dialog");
+    expect(dialogo).toHaveTextContent("Thor");
+    expect(within(dialogo).queryByRole("alert")).not.toBeInTheDocument();
   });
 });

@@ -77,14 +77,6 @@ export function Pacotes() {
         </div>
       </div>
 
-      {/* O 400 da exclusão ("já tem atendimento vinculado") é a única forma de a
-          Patricia descobrir o que fazer; engolido, o botão só pareceria quebrado. */}
-      {excluir.isError && (
-        <p role="alert" className="mt-4 rounded-lg bg-erro/10 px-3 py-2 text-sm text-erro">
-          {mensagemDeErro(excluir.error)}
-        </p>
-      )}
-
       <div className="mt-6">
         {isError ? (
           <ErroAoCarregar aoTentarDeNovo={() => refetch()} />
@@ -142,7 +134,13 @@ export function Pacotes() {
                           <Button
                             variant="danger"
                             disabled={excluir.isPending}
-                            onClick={() => setAExcluir(p)}
+                            // reset(): sem isto o diálogo da PRÓXIMA venda abriria já
+                            // com o 400 da anterior, acusando uma linha que nem tem
+                            // atendimento vinculado.
+                            onClick={() => {
+                              excluir.reset();
+                              setAExcluir(p);
+                            }}
                           >
                             Excluir
                           </Button>
@@ -170,8 +168,9 @@ export function Pacotes() {
       {emEdicao && <ModalEdicao pacote={emEdicao} aoFechar={() => setEmEdicao(null)} />}
 
       {/* A venda É faturamento (regime de caixa): apagar mexe no caixa do mês da
-          compra. onSettled e não onSuccess — no 400 o diálogo sai de cena e a
-          recusa aparece no alerta acima da tabela. */}
+          compra. onSuccess e não onSettled — no 400 ("já tem atendimento vinculado")
+          o diálogo fica de pé mostrando o motivo, que é a única forma de ela
+          descobrir o que precisa fazer antes de tentar de novo. */}
       {aExcluir && (
         <Confirmacao
           aberto
@@ -179,8 +178,9 @@ export function Pacotes() {
           mensagem={`Excluir a venda do pacote de ${aExcluir.pet_nome}? A exclusão é permanente e tira ${formatarPreco(aExcluir.valor_pago)} do faturamento.`}
           rotuloConfirmar="Excluir"
           enviando={excluir.isPending}
+          erro={excluir.isError ? mensagemDeErro(excluir.error) : undefined}
           aoConfirmar={() =>
-            excluir.mutate(aExcluir.id, { onSettled: () => setAExcluir(null) })
+            excluir.mutate(aExcluir.id, { onSuccess: () => setAExcluir(null) })
           }
           aoCancelar={() => setAExcluir(null)}
         />
