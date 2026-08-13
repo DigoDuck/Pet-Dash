@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -7,6 +8,23 @@ const ITENS = [
   { id: 7, rotulo: "Luna · Ana Clara" },
   { id: 8, rotulo: "Thor · Ana Clara" },
 ];
+
+function ComboboxComValorSelecionado() {
+  const [valor, setValor] = useState<(typeof ITENS)[number] | null>(null);
+
+  return (
+    <>
+      <Combobox
+        label="Pet"
+        itens={ITENS}
+        valor={valor}
+        aoSelecionar={setValor}
+        aoDigitarBusca={() => {}}
+      />
+      <p>Selecionado: {valor?.rotulo ?? "nenhum"}</p>
+    </>
+  );
+}
 
 describe("Combobox", () => {
   it("emite o termo digitado", async () => {
@@ -30,6 +48,20 @@ describe("Combobox", () => {
     await userEvent.click(screen.getByText("Luna · Ana Clara"));
 
     expect(aoSelecionar).toHaveBeenCalledWith({ id: 7, rotulo: "Luna · Ana Clara" });
+  });
+
+  it("porta a lista para fora da raiz e mantém a seleção por clique", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ComboboxComValorSelecionado />);
+
+    await user.click(screen.getByLabelText("Pet"));
+
+    const lista = screen.getByRole("listbox");
+    expect(container).not.toContainElement(lista);
+
+    await user.click(screen.getByRole("option", { name: "Luna · Ana Clara" }));
+
+    expect(screen.getByText("Selecionado: Luna · Ana Clara")).toBeInTheDocument();
   });
 
   it("seleciona com teclado (seta + enter)", async () => {

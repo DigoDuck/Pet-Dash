@@ -40,6 +40,7 @@ describe("AppShell", () => {
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir menu" })).toHaveFocus();
   });
 
   it("fecha o menu ao clicar no backdrop", async () => {
@@ -47,9 +48,10 @@ describe("AppShell", () => {
     renderAppShell();
 
     await user.click(screen.getByRole("button", { name: "Abrir menu" }));
-    await user.click(screen.getByLabelText("Fechar menu"));
+    await user.click(screen.getByTestId("menu-backdrop"));
 
     expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir menu" })).toHaveFocus();
   });
 
   it("fecha o menu ao navegar por um link da Sidebar", async () => {
