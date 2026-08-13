@@ -38,6 +38,7 @@ export function AppShell() {
                   aria-label="Menu"
                   className="fixed inset-y-0 left-0 z-30 w-[260px] max-w-[85vw]"
                 >
+                  <Dialog.Title className="sr-only">Menu</Dialog.Title>
                   <Sidebar />
                 </Dialog.Content>
               </Dialog.Portal>
