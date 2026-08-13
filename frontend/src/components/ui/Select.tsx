@@ -16,7 +16,7 @@ export function Select({ label, error, id, className = "", ...props }: SelectPro
       <select
         id={selectId}
         aria-invalid={error ? true : undefined}
-        className={`rounded-lg border bg-white px-3 py-2 text-sm text-escuro transition-colors outline-none focus:border-marsala focus:ring-2 focus:ring-marsala/20 ${
+        className={`rounded-lg border bg-white px-3 py-2 text-sm text-escuro transition-colors outline-none focus:border-marsala focus:ring-2 focus:ring-marsala/20 pointer-coarse:text-base ${
           error ? "border-erro" : "border-neutro-light"
         } ${className}`}
         {...props}
