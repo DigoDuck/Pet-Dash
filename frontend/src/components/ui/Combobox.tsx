@@ -17,6 +17,17 @@ interface ComboboxProps {
   error?: string;
 }
 
+const ALTURA_MAXIMA_LISTA = 240;
+const ESPACO_ENTRE_CAMPO_E_LISTA = 4;
+
+interface PosicaoLista {
+  bottom?: number;
+  left: number;
+  maxHeight: number;
+  top?: number;
+  width: number;
+}
+
 export function Combobox({
   label, itens, valor, aoSelecionar, aoDigitarBusca, carregando, placeholder, error,
 }: ComboboxProps) {
@@ -28,19 +39,26 @@ export function Combobox({
   const raiz = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const lista = useRef<HTMLUListElement>(null);
-  const [posicaoLista, setPosicaoLista] = useState<{
-    top: number;
-    left: number;
-    width: number;
-  } | null>(null);
+  const [posicaoLista, setPosicaoLista] = useState<PosicaoLista | null>(null);
 
   const atualizarPosicaoLista = useCallback(() => {
     const retangulo = input.current?.getBoundingClientRect();
     if (!retangulo) return;
 
+    const alturaViewport = window.visualViewport?.height ?? window.innerHeight;
+    const espacoAbaixo = alturaViewport - retangulo.bottom - ESPACO_ENTRE_CAMPO_E_LISTA;
+    const abreParaCima = espacoAbaixo < ALTURA_MAXIMA_LISTA;
+    const espacoDisponivel = abreParaCima
+      ? retangulo.top - ESPACO_ENTRE_CAMPO_E_LISTA
+      : espacoAbaixo;
+
     setPosicaoLista({
-      top: retangulo.bottom + 4,
+      bottom: abreParaCima
+        ? alturaViewport - retangulo.top + ESPACO_ENTRE_CAMPO_E_LISTA
+        : undefined,
       left: retangulo.left,
+      maxHeight: Math.max(0, Math.min(ALTURA_MAXIMA_LISTA, espacoDisponivel)),
+      top: abreParaCima ? undefined : retangulo.bottom + ESPACO_ENTRE_CAMPO_E_LISTA,
       width: retangulo.width,
     });
   }, []);
@@ -61,12 +79,17 @@ export function Combobox({
       return;
     }
 
+    const viewportVisual = window.visualViewport;
     atualizarPosicaoLista();
     window.addEventListener("resize", atualizarPosicaoLista);
     window.addEventListener("scroll", atualizarPosicaoLista, true);
+    viewportVisual?.addEventListener("resize", atualizarPosicaoLista);
+    viewportVisual?.addEventListener("scroll", atualizarPosicaoLista);
     return () => {
       window.removeEventListener("resize", atualizarPosicaoLista);
       window.removeEventListener("scroll", atualizarPosicaoLista, true);
+      viewportVisual?.removeEventListener("resize", atualizarPosicaoLista);
+      viewportVisual?.removeEventListener("scroll", atualizarPosicaoLista);
     };
   }, [aberto, atualizarPosicaoLista]);
 
@@ -129,8 +152,10 @@ export function Combobox({
                 ref={lista}
                 id={listId}
                 role="listbox"
-                className="z-10 max-h-60 overflow-auto rounded-lg border border-neutro-light bg-white shadow-lg"
+                className="z-10 overflow-auto rounded-lg border border-neutro-light bg-white shadow-lg"
                 style={{
+                  bottom: posicaoLista.bottom,
+                  maxHeight: posicaoLista.maxHeight,
                   position: "fixed",
                   top: posicaoLista.top,
                   left: posicaoLista.left,

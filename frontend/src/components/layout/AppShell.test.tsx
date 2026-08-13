@@ -48,7 +48,8 @@ describe("AppShell", () => {
     renderAppShell();
 
     await user.click(screen.getByRole("button", { name: "Abrir menu" }));
-    await user.click(screen.getByTestId("menu-backdrop"));
+    const backdrop = screen.getByRole("dialog").previousElementSibling as HTMLElement;
+    await user.click(backdrop);
 
     expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Abrir menu" })).toHaveFocus();

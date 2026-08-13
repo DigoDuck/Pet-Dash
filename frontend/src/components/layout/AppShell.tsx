@@ -31,11 +31,10 @@ export function AppShell() {
                 </button>
               </Dialog.Trigger>
               <Dialog.Portal>
-                <Dialog.Overlay data-testid="menu-backdrop" className="fixed inset-0 z-20 bg-escuro/50" />
+                <Dialog.Overlay className="fixed inset-0 z-20 bg-escuro/50" />
                 <Dialog.Content
-                  aria-label="Menu"
                   aria-describedby={undefined}
-                  className="fixed inset-y-0 left-0 z-30 w-[260px] max-w-[85vw]"
+                  className="mobile-menu-drawer fixed inset-y-0 left-0 z-30 w-[260px] max-w-[85vw]"
                 >
                   <Dialog.Title className="sr-only">Menu</Dialog.Title>
                   <Sidebar />
