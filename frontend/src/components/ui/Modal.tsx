@@ -23,9 +23,12 @@ export function Modal({ aberto, titulo, aoFechar, children }: ModalProps) {
         >
           <div className="mb-4 flex items-start justify-between gap-4">
             <Dialog.Title className="font-display text-xl text-escuro">{titulo}</Dialog.Title>
+            {/* `p-1` num ícone de 16px dava um alvo de ~24px, o menor da interface — e
+                é como se fecha todo modal no celular. O `-m-1` devolve o espaço extra
+                para fora, então o botão cresce sem empurrar o título. */}
             <Dialog.Close
               aria-label="Fechar"
-              className="rounded-lg p-1 text-neutro transition-colors hover:bg-neutro-light/40 hover:text-escuro"
+              className="flex items-center justify-center rounded-lg p-1 text-neutro transition-colors hover:bg-neutro-light/40 hover:text-escuro pointer-coarse:-m-1 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             >
               <X className="h-4 w-4" />
             </Dialog.Close>

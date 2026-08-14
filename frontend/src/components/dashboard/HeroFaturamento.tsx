@@ -68,17 +68,20 @@ export function HeroFaturamento({
         )}
       </p>
 
+      {/* São links, não o `Button`, então não herdam o alvo de toque de 44px que ele
+          aplica em ponteiro grosso. Sem isto ficam em ~36px, e são as duas ações
+          principais da tela inicial no celular. */}
       <div className="mt-6 flex flex-wrap gap-2">
         <Link
           to="/atendimentos/novo"
-          className="inline-flex items-center gap-2 rounded-lg bg-ouro px-3.5 py-2 text-sm font-semibold text-escuro transition-colors hover:bg-ouro-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-creme"
+          className="inline-flex items-center gap-2 rounded-lg bg-ouro px-3.5 py-2 text-sm font-semibold text-escuro transition-colors hover:bg-ouro-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-creme pointer-coarse:min-h-11"
         >
           <CalendarPlus className="h-4 w-4" aria-hidden="true" />
           Novo atendimento
         </Link>
         <Link
           to="/financeiro"
-          className="inline-flex items-center gap-2 rounded-lg border border-creme/30 px-3.5 py-2 text-sm font-semibold text-creme transition-colors hover:bg-creme/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-creme"
+          className="inline-flex items-center gap-2 rounded-lg border border-creme/30 px-3.5 py-2 text-sm font-semibold text-creme transition-colors hover:bg-creme/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-creme pointer-coarse:min-h-11"
         >
           <ReceiptText className="h-4 w-4" aria-hidden="true" />
           Lançar custo

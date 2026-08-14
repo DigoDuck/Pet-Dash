@@ -83,7 +83,8 @@ export function Clientes() {
               type="button"
               onClick={() => trocarAba(valor)}
               aria-pressed={aba === valor}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+              // ~30px sem o piso de toque, e é o controle que troca a aba inteira.
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors pointer-coarse:min-h-11 ${
                 aba === valor ? "bg-marsala text-creme" : "text-neutro hover:text-escuro"
               }`}
             >
