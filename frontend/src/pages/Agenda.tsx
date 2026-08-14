@@ -117,7 +117,7 @@ export function Agenda() {
           type="button"
           aria-label="Semana anterior"
           onClick={() => setTerca(somarDias(terca, -7))}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutro-light bg-creme text-neutro hover:text-escuro"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutro-light bg-creme text-neutro hover:text-escuro pointer-coarse:min-h-11 pointer-coarse:min-w-11"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -128,7 +128,7 @@ export function Agenda() {
           type="button"
           aria-label="Próxima semana"
           onClick={() => setTerca(somarDias(terca, 7))}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutro-light bg-creme text-neutro hover:text-escuro"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutro-light bg-creme text-neutro hover:text-escuro pointer-coarse:min-h-11 pointer-coarse:min-w-11"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -141,7 +141,9 @@ export function Agenda() {
           não é desenhado — avisar é o que impede o corte de virar double-booking mudo. */}
       {data && data.count > atendimentos.length && (
         <p className="mt-6 rounded-lg border border-ouro/40 bg-ouro/10 px-4 py-2 text-sm text-escuro">
-          Esta semana tem {data.count} atendimentos e a grade mostra apenas {atendimentos.length}.
+          {/* "a agenda", não "a grade": abaixo de lg a grade nem existe, e o aviso
+              precisa fazer sentido nas duas visões. */}
+          Esta semana tem {data.count} atendimentos e a agenda mostra apenas {atendimentos.length}.
           Veja o restante na <Link to="/atendimentos" className="font-semibold text-marsala hover:underline">lista de atendimentos</Link>.
         </p>
       )}
@@ -245,6 +247,9 @@ export function Agenda() {
                       </span>
                       <span className="block truncate opacity-80">{a.servico_nome}</span>
                       <span className="block font-mono opacity-75">{a.horario.slice(0, 5)}</span>
+                      {/* O card tem 56px de altura e não comporta mais uma linha, mas o
+                          status não pode existir só como cor de fundo no nome do link. */}
+                      <span className="sr-only">{a.status}</span>
                     </Link>
                   ),
                 )}
@@ -291,6 +296,15 @@ export function Agenda() {
                             )}
                           </span>
                           <span className="block truncate text-xs opacity-80">{a.servico_nome}</span>
+                        </span>
+                        {/* Status como texto, não como Badge: o Badge tem fundo
+                            translúcido calibrado para superfície clara, e num card
+                            Liberado (bg-marsala) ele sumiria. Aqui a cor vem da própria
+                            linha, que já tem contraste garantido contra o fundo dela.
+                            Texto e não só cor porque cor sozinha não é informação para
+                            quem não a distingue — e ela vira o nome acessível do link. */}
+                        <span className="shrink-0 text-[10px] font-semibold tracking-[0.08em] uppercase opacity-80">
+                          {a.status}
                         </span>
                       </Link>
                     </li>
