@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,6 +24,20 @@ function renderizar() {
   return renderizarComProvedores(<Agenda />, { rota: "/agenda", caminho: "/agenda" });
 }
 
+/** Grade e lista existem juntas no DOM: quem esconde uma delas é `lg:`, e o jsdom não
+ *  aplica media query. Toda asserção sobre a grade precisa ser escopada, senão encontra
+ *  o mesmo atendimento duas vezes.
+ *
+ *  A região nasce vazia junto com a página, antes da consulta responder, então esperar
+ *  só por ela não basta: quem espera é o `find*` de dentro do escopo. */
+async function naGrade() {
+  return within(await screen.findByRole("region", { name: "Semana em grade" }));
+}
+
+async function naLista() {
+  return within(await screen.findByRole("region", { name: "Semana em lista" }));
+}
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(2026, 6, 15)); // quarta, 15/07/2026
@@ -38,8 +52,7 @@ describe("Agenda", () => {
 
     renderizar();
 
-    // "Luna" aparece duas vezes: no card da grade e na tabela de próximos.
-    expect(await screen.findAllByText("Luna")).toHaveLength(2);
+    expect(await (await naGrade()).findByText("Luna")).toBeInTheDocument();
     // 15/07/2026 é quarta: a semana vai de terça (14) a domingo (19), e a busca
     // inclui a segunda de folga (20) para o atendimento excepcional não sumir.
     expect(url).toContain("data__gte=2026-07-14");
@@ -78,7 +91,18 @@ describe("Agenda", () => {
 
     renderizar();
 
-    expect(await screen.findByRole("link", { name: /Luna/ })).toHaveAttribute(
+    expect(await (await naGrade()).findByRole("link", { name: /Luna/ })).toHaveAttribute(
+      "href",
+      "/atendimentos/42/editar",
+    );
+  });
+
+  it("a lista do celular leva para a mesma edição que o card", async () => {
+    servir([atendimento({ id: 42 })]);
+
+    renderizar();
+
+    expect(await (await naLista()).findByRole("link", { name: /Luna/ })).toHaveAttribute(
       "href",
       "/atendimentos/42/editar",
     );
@@ -89,9 +113,10 @@ describe("Agenda", () => {
 
     renderizar();
 
-    await screen.findAllByText("Luna");
-    // Um no card da grade, outro na linha da tabela de próximos.
-    expect(screen.getAllByText("VIP")).toHaveLength(2);
+    // Um no card da grade, outro na linha da lista, outro na tabela de próximos.
+    expect(await (await naGrade()).findByText("VIP")).toBeInTheDocument();
+    expect(await (await naLista()).findByText("VIP")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("VIP")).toBeInTheDocument();
   });
 
   // O bug que o posicionamento só pela hora cheia tinha: 10:00 e 10:30 recebiam o
@@ -104,8 +129,9 @@ describe("Agenda", () => {
 
     renderizar();
 
-    const luna = await screen.findByRole("link", { name: /Luna/ });
-    const thor = screen.getByRole("link", { name: /Thor/ });
+    const grade = await naGrade();
+    const luna = await grade.findByRole("link", { name: /Luna/ });
+    const thor = grade.getByRole("link", { name: /Thor/ });
     expect(luna.style.top).not.toBe(thor.style.top);
   });
 
@@ -117,8 +143,9 @@ describe("Agenda", () => {
 
     renderizar();
 
-    const luna = await screen.findByRole("link", { name: /Luna/ });
-    const thor = screen.getByRole("link", { name: /Thor/ });
+    const grade = await naGrade();
+    const luna = await grade.findByRole("link", { name: /Luna/ });
+    const thor = grade.getByRole("link", { name: /Thor/ });
     expect(luna.style.top).toBe(thor.style.top);
     expect(luna.style.left).not.toBe(thor.style.left);
   });
@@ -130,8 +157,9 @@ describe("Agenda", () => {
 
     renderizar();
 
-    expect(await screen.findAllByText("Encaixe")).not.toHaveLength(0);
-    expect(screen.getByText("Seg")).toBeInTheDocument();
+    const grade = await naGrade();
+    expect(await grade.findByText("Encaixe")).toBeInTheDocument();
+    expect(grade.getByText("Seg")).toBeInTheDocument();
   });
 
   it("avisa quando a semana tem mais atendimentos do que a página traz", async () => {

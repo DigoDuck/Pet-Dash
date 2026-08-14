@@ -117,7 +117,10 @@ describe("Combobox", () => {
     }
   });
 
-  it("limita a altura da lista ao espaço útil acima do campo", async () => {
+  // Com o teclado aberto os dois lados ficam apertados. Decidir só por "cabem 240px
+  // abaixo?" mandava a lista para o lado MENOR: 116px acima quando havia 236px abaixo,
+  // ou seja, metade das opções que caberiam.
+  it("fica abaixo quando nenhum lado comporta a lista mas abaixo sobra mais", async () => {
     const viewportVisualOriginal = Object.getOwnPropertyDescriptor(window, "visualViewport");
 
     Object.defineProperty(window, "visualViewport", {
@@ -146,9 +149,53 @@ describe("Combobox", () => {
 
       await user.click(screen.getByLabelText("Pet"));
 
+      // 236px abaixo contra 116px acima: fica embaixo, limitada ao que sobra.
       expect(screen.getByRole("listbox")).toHaveStyle({
-        bottom: "284px",
-        maxHeight: "116px",
+        top: "164px",
+        maxHeight: "236px",
+      });
+    } finally {
+      if (viewportVisualOriginal) {
+        Object.defineProperty(window, "visualViewport", viewportVisualOriginal);
+      } else {
+        delete (window as unknown as { visualViewport?: VisualViewport }).visualViewport;
+      }
+    }
+  });
+
+  it("limita a altura ao espaço útil quando abre para cima", async () => {
+    const viewportVisualOriginal = Object.getOwnPropertyDescriptor(window, "visualViewport");
+
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: {
+        addEventListener: vi.fn(),
+        height: 300,
+        removeEventListener: vi.fn(),
+      } satisfies Pick<VisualViewport, "addEventListener" | "height" | "removeEventListener">,
+    });
+    vi.spyOn(HTMLInputElement.prototype, "getBoundingClientRect").mockReturnValue({
+      bottom: 190,
+      height: 40,
+      left: 20,
+      right: 220,
+      toJSON: () => ({}),
+      top: 150,
+      width: 200,
+      x: 20,
+      y: 150,
+    });
+
+    try {
+      const user = userEvent.setup();
+      render(<Combobox label="Pet" itens={ITENS} valor={null} aoSelecionar={vi.fn()} aoDigitarBusca={vi.fn()} />);
+
+      await user.click(screen.getByLabelText("Pet"));
+
+      // 106px abaixo contra 146px acima: vira para cima e a altura cai para os 146.
+      expect(screen.getByRole("listbox")).toHaveStyle({
+        bottom: "154px",
+        maxHeight: "146px",
       });
     } finally {
       if (viewportVisualOriginal) {

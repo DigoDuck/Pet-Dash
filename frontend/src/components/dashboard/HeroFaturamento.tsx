@@ -49,8 +49,13 @@ export function HeroFaturamento({
       </div>
 
       {/* Erro mostra "—", nunca "R$ 0,00": zero é um número, e um número errado numa
-          tela de dinheiro é pior do que a ausência dele. */}
-      <p className="mt-6 font-mono text-4xl font-semibold tracking-tight sm:text-5xl">
+          tela de dinheiro é pior do que a ausência dele.
+
+          `text-3xl` na base pelo mesmo motivo: a seção é `overflow-hidden` por causa do
+          radial do fundo, então um valor largo demais não quebra linha nem vaza — ele é
+          CORTADO. "R$ 123.456,78" em mono a 36px passa dos 294px que sobram num
+          telefone de 390px, e o corte mostraria um número que não é o número. */}
+      <p className="mt-6 font-mono text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
         {erro ? "—" : carregando || faturamento == null ? "···" : faturamento}
       </p>
 
