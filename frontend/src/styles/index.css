@@ -20,3 +20,41 @@
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
+
+@keyframes menu-mobile-entra {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes menu-mobile-sai {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+.mobile-menu-drawer[data-state="open"] {
+  animation: menu-mobile-entra 180ms ease-out;
+}
+
+.mobile-menu-drawer[data-state="closed"] {
+  animation: menu-mobile-sai 150ms ease-in;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-menu-drawer[data-state] {
+    animation: none;
+  }
+}

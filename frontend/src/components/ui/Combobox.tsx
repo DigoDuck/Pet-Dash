@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 export interface ItemCombobox {
   id: number;
@@ -16,6 +17,17 @@ interface ComboboxProps {
   error?: string;
 }
 
+const ALTURA_MAXIMA_LISTA = 240;
+const ESPACO_ENTRE_CAMPO_E_LISTA = 4;
+
+interface PosicaoLista {
+  bottom?: number;
+  left: number;
+  maxHeight: number;
+  top?: number;
+  width: number;
+}
+
 export function Combobox({
   label, itens, valor, aoSelecionar, aoDigitarBusca, carregando, placeholder, error,
 }: ComboboxProps) {
@@ -25,15 +37,61 @@ export function Combobox({
   const [texto, setTexto] = useState("");
   const [destaque, setDestaque] = useState(0);
   const raiz = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const lista = useRef<HTMLUListElement>(null);
+  const [posicaoLista, setPosicaoLista] = useState<PosicaoLista | null>(null);
+
+  const atualizarPosicaoLista = useCallback(() => {
+    const retangulo = input.current?.getBoundingClientRect();
+    if (!retangulo) return;
+
+    const alturaViewport = window.visualViewport?.height ?? window.innerHeight;
+    const espacoAbaixo = alturaViewport - retangulo.bottom - ESPACO_ENTRE_CAMPO_E_LISTA;
+    const abreParaCima = espacoAbaixo < ALTURA_MAXIMA_LISTA;
+    const espacoDisponivel = abreParaCima
+      ? retangulo.top - ESPACO_ENTRE_CAMPO_E_LISTA
+      : espacoAbaixo;
+
+    setPosicaoLista({
+      bottom: abreParaCima
+        ? alturaViewport - retangulo.top + ESPACO_ENTRE_CAMPO_E_LISTA
+        : undefined,
+      left: retangulo.left,
+      maxHeight: Math.max(0, Math.min(ALTURA_MAXIMA_LISTA, espacoDisponivel)),
+      top: abreParaCima ? undefined : retangulo.bottom + ESPACO_ENTRE_CAMPO_E_LISTA,
+      width: retangulo.width,
+    });
+  }, []);
 
   // Fecha ao clicar fora.
   useEffect(() => {
     function aoClicarFora(e: MouseEvent) {
-      if (raiz.current && !raiz.current.contains(e.target as Node)) setAberto(false);
+      const alvo = e.target as Node;
+      if (!raiz.current?.contains(alvo) && !lista.current?.contains(alvo)) setAberto(false);
     }
     document.addEventListener("mousedown", aoClicarFora);
     return () => document.removeEventListener("mousedown", aoClicarFora);
   }, []);
+
+  useEffect(() => {
+    if (!aberto) {
+      setPosicaoLista(null);
+      return;
+    }
+
+    const viewportVisual = window.visualViewport;
+    atualizarPosicaoLista();
+    window.addEventListener("resize", atualizarPosicaoLista);
+    window.addEventListener("scroll", atualizarPosicaoLista, true);
+    viewportVisual?.addEventListener("resize", atualizarPosicaoLista);
+    viewportVisual?.addEventListener("scroll", atualizarPosicaoLista);
+    return () => {
+      window.removeEventListener("resize", atualizarPosicaoLista);
+      window.removeEventListener("scroll", atualizarPosicaoLista, true);
+      viewportVisual?.removeEventListener("resize", atualizarPosicaoLista);
+      viewportVisual?.removeEventListener("scroll", atualizarPosicaoLista);
+    };
+  }, [aberto, atualizarPosicaoLista]);
 
   // O input mostra o rótulo selecionado quando fechado; o texto de busca quando aberto.
   const exibido = aberto ? texto : (valor?.rotulo ?? "");
@@ -67,6 +125,7 @@ export function Combobox({
       </label>
       <div className="relative">
         <input
+          ref={input}
           id={inputId}
           role="combobox"
           aria-expanded={aberto}
@@ -83,39 +142,52 @@ export function Combobox({
           }}
           onFocus={() => setAberto(true)}
           onKeyDown={aoTeclar}
-          className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-escuro outline-none focus:border-marsala focus:ring-2 focus:ring-marsala/20 ${
+          className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-escuro outline-none focus:border-marsala focus:ring-2 focus:ring-marsala/20 pointer-coarse:text-base ${
             error ? "border-erro" : "border-neutro-light"
           }`}
         />
-        {aberto && (
-          <ul
-            id={listId}
-            role="listbox"
-            className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-neutro-light bg-white shadow-lg"
-          >
-            {carregando && <li className="px-3 py-2 text-sm text-neutro">Buscando...</li>}
-            {!carregando && itens.length === 0 && (
-              <li className="px-3 py-2 text-sm text-neutro">Nenhum pet encontrado</li>
-            )}
-            {itens.map((item, i) => (
-              <li
-                key={item.id}
-                role="option"
-                aria-selected={i === destaque}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  selecionar(item);
+        {aberto && posicaoLista
+          ? createPortal(
+              <ul
+                ref={lista}
+                id={listId}
+                role="listbox"
+                className="z-10 overflow-auto rounded-lg border border-neutro-light bg-white shadow-lg"
+                style={{
+                  bottom: posicaoLista.bottom,
+                  maxHeight: posicaoLista.maxHeight,
+                  position: "fixed",
+                  top: posicaoLista.top,
+                  left: posicaoLista.left,
+                  width: posicaoLista.width,
+                  pointerEvents: "auto",
                 }}
-                onMouseEnter={() => setDestaque(i)}
-                className={`cursor-pointer px-3 py-2 text-sm ${
-                  i === destaque ? "bg-marsala/10 text-marsala" : "text-escuro"
-                }`}
               >
-                {item.rotulo}
-              </li>
-            ))}
-          </ul>
-        )}
+                {carregando && <li className="px-3 py-2 text-sm text-neutro">Buscando...</li>}
+                {!carregando && itens.length === 0 && (
+                  <li className="px-3 py-2 text-sm text-neutro">Nenhum pet encontrado</li>
+                )}
+                {itens.map((item, i) => (
+                  <li
+                    key={item.id}
+                    role="option"
+                    aria-selected={i === destaque}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selecionar(item);
+                    }}
+                    onMouseEnter={() => setDestaque(i)}
+                    className={`cursor-pointer px-3 py-2 text-sm ${
+                      i === destaque ? "bg-marsala/10 text-marsala" : "text-escuro"
+                    }`}
+                  >
+                    {item.rotulo}
+                  </li>
+                ))}
+              </ul>,
+              document.body,
+            )
+          : null}
       </div>
       {error && (
         <p role="alert" className="text-xs text-erro">

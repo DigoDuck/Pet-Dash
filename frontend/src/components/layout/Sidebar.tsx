@@ -47,7 +47,7 @@ function GrupoNav({ titulo, itens }: { titulo: string; itens: ItemNav[] }) {
               // Sem `end`, a rota "/" fica ativa em todas as outras (é prefixo de tudo).
               end={to === "/"}
               className={({ isActive }) =>
-                `flex items-center gap-3 border-r-2 px-6 py-2.5 text-sm transition-colors ${
+                `flex items-center gap-3 border-r-2 px-6 py-2.5 text-sm transition-colors pointer-coarse:min-h-11 ${
                   isActive
                     ? "border-ouro bg-escuro-suave font-semibold text-ouro"
                     : "border-transparent text-creme/75 hover:bg-escuro-suave/60 hover:text-ouro"
@@ -70,12 +70,8 @@ function GrupoNav({ titulo, itens }: { titulo: string; itens: ItemNav[] }) {
 
 export function Sidebar() {
   const navigate = useNavigate();
-  // `sticky top-0 h-screen` e não `fixed`: a sidebar continua ocupando a coluna do
-  // flex do AppShell, então o conteúdo não precisa de margem compensatória. O
-  // h-screen é o que a prende — sem altura própria ela acompanhava o scroll da
-  // página. `shrink-0` para o menu nunca ser espremido por uma tabela larga.
   return (
-    <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-r border-escuro-suave bg-escuro text-creme">
+    <aside className="flex h-full w-full flex-col border-r border-escuro-suave bg-escuro text-creme">
       <div className="flex items-center gap-3 border-b border-escuro-suave px-6 py-6">
         {/* A logo é dourada: sempre dentro de um container marsala, nunca em fundo claro. */}
         <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-marsala">
@@ -98,7 +94,7 @@ export function Sidebar() {
           logout();
           navigate("/login");
         }}
-        className="m-4 flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-creme/60 transition-colors hover:bg-escuro-suave hover:text-creme"
+        className="m-4 flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-creme/60 transition-colors hover:bg-escuro-suave hover:text-creme pointer-coarse:min-h-11"
       >
         <LogOut className="h-4 w-4" strokeWidth={1.75} />
         Sair
