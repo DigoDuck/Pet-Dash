@@ -108,6 +108,18 @@ describe("Agenda", () => {
     );
   });
 
+  // Cor sozinha não é informação: quem não distingue marsala de creme não sabe se o
+  // atendimento está Liberado ou Pendente. O status precisa estar no texto, e entrar no
+  // nome acessível do link, nas duas visões.
+  it.each(["Liberado", "Pendente"] as const)("o status %s não fica só na cor", async (status) => {
+    servir([atendimento({ status })]);
+
+    renderizar();
+
+    expect(await (await naLista()).findByRole("link", { name: new RegExp(status) })).toBeInTheDocument();
+    expect((await naGrade()).getByRole("link", { name: new RegExp(status) })).toBeInTheDocument();
+  });
+
   it("marca o pet VIP no card e na tabela", async () => {
     servir([atendimento({ pet_vip: true })]);
 

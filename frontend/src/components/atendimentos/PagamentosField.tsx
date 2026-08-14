@@ -34,15 +34,19 @@ export function PagamentosField({ control, register, watch, valorDevido }: Pagam
         </Button>
       </div>
 
+      {/* `flex-wrap` porque os campos ficam 2px mais largos em ponteiro grosso (16px de
+          fonte contra 14px) e a linha tem select + valor + Remover. Sem quebra, os três
+          se espremiam até estourar em 390px. O layout completo do formulário é da
+          fase 4; aqui é só não regredir com o que esta mudança acrescenta. */}
       {fields.map((field, i) => (
-        <div key={field.id} className="flex items-end gap-2">
+        <div key={field.id} className="flex flex-wrap items-end gap-2">
           <div className="flex flex-col gap-1.5">
             <label htmlFor={`pag-metodo-${i}`} className="text-xs font-medium text-neutro">
               Método
             </label>
             <select
               id={`pag-metodo-${i}`}
-              className="rounded-lg border border-neutro-light bg-white px-3 py-2 text-sm text-escuro"
+              className="rounded-lg border border-neutro-light bg-white px-3 py-2 text-sm text-escuro pointer-coarse:min-h-11 pointer-coarse:text-base"
               {...register(`pagamentos.${i}.metodo`)}
             >
               {METODOS.map((m) => (
@@ -60,7 +64,7 @@ export function PagamentosField({ control, register, watch, valorDevido }: Pagam
               id={`pag-valor-${i}`}
               inputMode="decimal"
               placeholder="0.00"
-              className="rounded-lg border border-neutro-light bg-white px-3 py-2 text-sm text-escuro"
+              className="rounded-lg border border-neutro-light bg-white px-3 py-2 text-sm text-escuro pointer-coarse:min-h-11 pointer-coarse:text-base"
               {...register(`pagamentos.${i}.valor`)}
             />
           </div>
