@@ -96,6 +96,13 @@ export function Agenda() {
     .filter((a) => a.data >= hoje && a.status !== "Cancelado")
     .sort((a, b) => `${a.data}${a.horario}`.localeCompare(`${b.data}${b.horario}`));
 
+  // A lista do celular mostra o cancelado (ele existe no histórico do dia e o card da
+  // grade também o desenha), só que ordenado por hora em vez de posicionado por hora.
+  const doDia = (dia: string) =>
+    atendimentos
+      .filter((a) => a.data === dia)
+      .sort((a, b) => a.horario.localeCompare(b.horario));
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -144,7 +151,16 @@ export function Agenda() {
           <ErroAoCarregar aoTentarDeNovo={() => refetch()} />
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-xl border border-neutro-light/60 bg-creme">
+        <>
+        {/* A grade só existe a partir de lg. Grade de tempo com 6 colunas depende de
+            largura para significar alguma coisa: em 390px cada dia fica com ~48px e os
+            cards viram tarja ilegível, mesmo com o scroll horizontal. Espremer não
+            adapta, destrói — então abaixo de lg a mesma semana vira lista por dia.
+            Não é esconder função: são os mesmos atendimentos, com os mesmos links. */}
+        <section
+          aria-label="Semana em grade"
+          className="mt-6 hidden overflow-x-auto rounded-xl border border-neutro-light/60 bg-creme lg:block"
+        >
           <div
             className="grid min-w-180"
             style={{ gridTemplateColumns: `56px repeat(${dias.length}, minmax(0, 1fr))` }}
@@ -235,7 +251,55 @@ export function Agenda() {
               </div>
             ))}
           </div>
-        </div>
+        </section>
+
+        {/* Nomear as duas visões não é só para o teste conseguir separá-las: são duas
+            regiões com o mesmo conteúdo em formatos diferentes, e o leitor de tela
+            precisa saber em qual está. */}
+        <section aria-label="Semana em lista" className="mt-6 lg:hidden">
+          {isPending && <p className="text-sm text-neutro">Carregando...</p>}
+          {dias
+            .filter((dia) => doDia(dia).length > 0)
+            .map((dia) => (
+              <div key={dia} className="mt-6 first:mt-0">
+                <h2
+                  className={`text-[10px] font-semibold tracking-[0.12em] uppercase ${
+                    dia === hoje ? "text-marsala" : "text-neutro"
+                  }`}
+                >
+                  {diaCurto(dia)} {dia.slice(8)}
+                  {dia === hoje && " · hoje"}
+                </h2>
+                <ul className="mt-2 space-y-2">
+                  {doDia(dia).map((a) => (
+                    <li key={a.id}>
+                      <Link
+                        to={`/atendimentos/${a.id}/editar`}
+                        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm shadow-sm ${CORES[a.status]}`}
+                      >
+                        <span className="shrink-0 font-mono text-xs">{a.horario.slice(0, 5)}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <span className="truncate">{a.pet_nome}</span>
+                            {a.pet_vip && (
+                              <Badge
+                                variant="vip"
+                                className="shrink-0 px-1 py-px text-[9px] tracking-wider uppercase"
+                              >
+                                VIP
+                              </Badge>
+                            )}
+                          </span>
+                          <span className="block truncate text-xs opacity-80">{a.servico_nome}</span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+        </section>
+        </>
       )}
 
       {!isPending && !isError && atendimentos.length === 0 && (
