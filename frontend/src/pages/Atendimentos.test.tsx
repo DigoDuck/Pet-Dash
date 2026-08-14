@@ -75,7 +75,8 @@ describe("Atendimentos", () => {
     renderizarComProvedores(<Atendimentos />, { rota: "/atendimentos", caminho: "/atendimentos" });
     await screen.findByText("Luna");
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancelar atendimento" }));
+    // O gatilho na linha é "Cancelar"; quem escreve por extenso é o diálogo.
+    await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(corpo).toBeNull();
 
     const dialogo = await screen.findByRole("dialog");

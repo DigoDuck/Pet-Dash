@@ -14,7 +14,7 @@ export function StatusAcao({ atendimento }: { atendimento: Atendimento }) {
   }
 
   return (
-    <div className="flex justify-end gap-2">
+    <div className="flex flex-col items-end gap-2 md:flex-row md:justify-end">
       {atendimento.status === "Pendente" && (
         <Button
           variant="secondary"
@@ -24,8 +24,12 @@ export function StatusAcao({ atendimento }: { atendimento: Atendimento }) {
           Liberar
         </Button>
       )}
+      {/* "Cancelar" e não "Cancelar atendimento": ao lado de Liberar, dentro da linha
+          daquele atendimento, o objeto já está dito e o rótulo longo era o que estourava
+          a coluna Ações no celular. O diálogo continua escrevendo por extenso, que é
+          onde a ambiguidade com o botão de desistir realmente existia. */}
       <Button variant="danger" disabled={atualizar.isPending} onClick={() => setConfirmando(true)}>
-        Cancelar atendimento
+        Cancelar
       </Button>
 
       {/* Só o cancelamento confirma: liberar é reversível, cancelar mexe no saldo
