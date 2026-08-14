@@ -47,10 +47,13 @@ export function Combobox({
 
     const alturaViewport = window.visualViewport?.height ?? window.innerHeight;
     const espacoAbaixo = alturaViewport - retangulo.bottom - ESPACO_ENTRE_CAMPO_E_LISTA;
-    const abreParaCima = espacoAbaixo < ALTURA_MAXIMA_LISTA;
-    const espacoDisponivel = abreParaCima
-      ? retangulo.top - ESPACO_ENTRE_CAMPO_E_LISTA
-      : espacoAbaixo;
+    const espacoAcima = retangulo.top - ESPACO_ENTRE_CAMPO_E_LISTA;
+    // Vira para cima só quando a lista não cabe abaixo E em cima cabe mais. A segunda
+    // metade não é detalhe: com o teclado aberto os dois lados costumam ficar apertados,
+    // e decidir só pelo primeiro teste abria a lista no lado MENOR — 116px de opções
+    // acima quando havia 236px abaixo.
+    const abreParaCima = espacoAbaixo < ALTURA_MAXIMA_LISTA && espacoAcima > espacoAbaixo;
+    const espacoDisponivel = abreParaCima ? espacoAcima : espacoAbaixo;
 
     setPosicaoLista({
       bottom: abreParaCima
