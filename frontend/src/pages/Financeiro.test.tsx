@@ -37,6 +37,9 @@ function retirada(over: Record<string, unknown> = {}) {
 
 const RESUMO = {
   faturamento: "8000.00",
+  transporte: "710.00",
+  // Recorte de `custos`, não parcela extra: 280 dos 1500 são transporte.
+  custo_transporte: "280.00",
   custos: "1500.00",
   retiradas: "2000.00",
   lucro: "6500.00",
@@ -93,6 +96,57 @@ describe("Financeiro", () => {
 
     expect(await screen.findByText("R$ 1500,00")).toBeInTheDocument();
     expect(screen.getByText("R$ 2000,00")).toBeInTheDocument();
+  });
+
+  // A pergunta da Patricia é "o triciclo se paga?", e ela não é respondida por
+  // nenhum dos dois números sozinho: a receita da corrida vive dentro do
+  // faturamento, o custo dela vive diluído no total de custos.
+  it("o bloco de transporte mostra corrida, custo e saldo do mês", async () => {
+    server.use(
+      http.get(`${BASE}/custos/`, () => HttpResponse.json(paginado([custo()]))),
+      http.get(`${BASE}/retiradas/`, () => HttpResponse.json(paginado([]))),
+      http.get(`${BASE}/dashboard/`, () => HttpResponse.json(RESUMO)),
+    );
+
+    renderizar();
+
+    expect(await screen.findByText("+ R$ 710,00")).toBeInTheDocument();
+    expect(screen.getByText("− R$ 280,00")).toBeInTheDocument();
+    expect(screen.getByText("+ R$ 430,00")).toBeInTheDocument();
+    // O custo do transporte é um recorte do total, não uma despesa a mais.
+    expect(screen.getByText("R$ 1500,00")).toBeInTheDocument();
+    expect(screen.getByText("Transporte: R$ 280,00")).toBeInTheDocument();
+  });
+
+  it("transporte no vermelho aparece com o sinal invertido", async () => {
+    server.use(
+      http.get(`${BASE}/custos/`, () => HttpResponse.json(paginado([]))),
+      http.get(`${BASE}/retiradas/`, () => HttpResponse.json(paginado([]))),
+      http.get(`${BASE}/dashboard/`, () =>
+        HttpResponse.json({ ...RESUMO, transporte: "100.00", custo_transporte: "180.00" }),
+      ),
+    );
+
+    renderizar();
+
+    // "− R$ 80,00", e não o "R$ -80,00" que o formatarPreco produziria sozinho.
+    expect(await screen.findByText("− R$ 80,00")).toBeInTheDocument();
+  });
+
+  // Zero é um número: com o dashboard fora do ar, o bloco não pode afirmar que o
+  // triciclo se pagou. Mesma regra do KpiCard.
+  it("dashboard fora do ar mostra traço no bloco de transporte, não zero", async () => {
+    server.use(
+      http.get(`${BASE}/custos/`, () => HttpResponse.json(paginado([custo()]))),
+      http.get(`${BASE}/retiradas/`, () => HttpResponse.json(paginado([]))),
+      http.get(`${BASE}/dashboard/`, () => new HttpResponse(null, { status: 500 })),
+    );
+
+    renderizar();
+
+    await screen.findByText("Aluguel");
+    await waitFor(() => expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(3));
+    expect(screen.queryByText("R$ 0,00")).not.toBeInTheDocument();
   });
 
   it("trocar o mês refaz as três consultas com o novo intervalo", async () => {

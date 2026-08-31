@@ -23,6 +23,10 @@ VIP_MIN_GASTO = Decimal("500")
 VIP_JANELA_DIAS = 365
 CATEGORIAS_NO_GRAFICO = 5
 TRANSACOES_NO_FEED = 8
+# A categoria do Custo é texto livre. O agrupamento usa a chave normalizada
+# (lower + trim), a mesma de `custos_por_categoria` — sem isso "Transporte " e
+# "transporte" seriam duas despesas diferentes.
+CATEGORIA_TRANSPORTE = "transporte"
 
 
 def transporte_periodo(inicio, fim):
@@ -39,6 +43,30 @@ def transporte_periodo(inicio, fim):
     return Atendimento.objects.liberados().no_periodo(inicio, fim).aggregate(
         total=Sum("transporte_valor")
     )["total"] or Decimal("0")
+
+
+def custo_transporte_periodo(inicio, fim):
+    """Despesa das corridas: soma dos `Custo` na categoria "Transporte" da competência.
+
+    É o outro lado de `transporte_periodo`. Junto com ela responde a pergunta que a
+    Patricia faz desde a planilha — "o triciclo se paga?" —, que nenhum dos dois
+    números responde sozinho.
+
+    Não reusa `custos_por_categoria`: aquela função corta a cauda em "Outros" a
+    partir da 6ª categoria, então o transporte sumiria dentro do bolo justamente no
+    mês de muitas categorias. Somar aqui é uma query e não tem teto.
+
+    Depende da Patricia lançar o combustível e a manutenção com essa categoria. Um
+    custo digitado como "gasolina" fica de fora, e a tela não tem como saber —
+    limite aceito para não criar campo novo em `Custo`.
+    """
+    return (
+        Custo.objects.filter(competencia__range=(inicio, fim))
+        .annotate(chave=Lower(Trim("categoria")))
+        .filter(chave=CATEGORIA_TRANSPORTE)
+        .aggregate(total=Sum("valor"))["total"]
+        or Decimal("0")
+    )
 
 
 def faturamento_periodo(inicio, fim):
@@ -85,8 +113,11 @@ def dashboard_periodo(inicio, fim):
     - pets_ativos: contagem do cadastro, não do período. Viaja aqui por caber no
       mesmo payload da tela que a exibe.
     - transporte: a parcela do faturamento que veio das corridas. Sai em separado
-      porque é o número que concilia com a planilha da Patricia, e porque ela quer
-      saber se o triciclo se paga (a receita da corrida contra o combustível).
+      porque é o número que concilia com a planilha da Patricia.
+    - custo_transporte: o outro lado da corrida (combustível, manutenção do
+      triciclo), lançado como Custo na categoria "Transporte". Viaja ao lado de
+      `transporte` para a tela do Financeiro fechar a conta do triciclo sem uma
+      segunda requisição. Já está incluído em `custos` — não é despesa nova.
     """
     faturamento = faturamento_periodo(inicio, fim)
 
@@ -118,6 +149,7 @@ def dashboard_periodo(inicio, fim):
     return {
         "faturamento": faturamento,
         "transporte": transporte_periodo(inicio, fim),
+        "custo_transporte": custo_transporte_periodo(inicio, fim),
         "custos": custos,
         "retiradas": retiradas,
         "lucro": lucro,
