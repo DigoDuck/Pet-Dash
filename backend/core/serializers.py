@@ -186,8 +186,12 @@ class DashboardSerializer(serializers.Serializer):
     ticket_medio = serializers.DecimalField(max_digits=10, decimal_places=2)
     margem = serializers.DecimalField(max_digits=6, decimal_places=4)
     # Parcela do faturamento que veio das corridas. É o número que concilia com a
-    # planilha e responde "o triciclo se paga?".
+    # planilha.
     transporte = serializers.DecimalField(max_digits=10, decimal_places=2)
+    # O outro lado da corrida: os custos da categoria "Transporte" da competência.
+    # Já contabilizado em `custos`; sai à parte só para a tela fechar "o triciclo se
+    # paga?". Somá-lo de novo ao total contaria a despesa duas vezes.
+    custo_transporte = serializers.DecimalField(max_digits=10, decimal_places=2)
     # Visitas Liberadas (inclui consumo de pacote) — não confundir com o denominador
     # do ticket médio, que conta eventos de receita. Ver dashboard_periodo.
     qtd_atendimentos = serializers.IntegerField()

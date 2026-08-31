@@ -197,9 +197,14 @@ export interface PontoSerie {
 export interface ResumoFinanceiro {
   faturamento: string;
   /** Parcela do faturamento que veio das corridas (já somada em `faturamento`).
-   *  Sai em separado para responder "o triciclo se paga?" e para conciliar com a
-   *  planilha, que sempre contou o transporte na receita. */
+   *  Sai em separado para conciliar com a planilha, que sempre contou o transporte
+   *  na receita. */
   transporte: string;
+  /** O outro lado da corrida: custos da categoria "Transporte" na competência
+   *  (combustível, manutenção do triciclo). JÁ INCLUÍDO em `custos` — somar os dois
+   *  desconta a mesma despesa duas vezes. Com `transporte`, responde "o triciclo se
+   *  paga?". */
+  custo_transporte: string;
   custos: string;
   retiradas: string;
   lucro: string;
