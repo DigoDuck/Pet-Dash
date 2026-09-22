@@ -9,19 +9,34 @@ interface ResumoMesProps {
   fim: string;
 }
 
+/** O campo como número, ou `null` quando ele não dá um número utilizável.
+ *
+ *  `types.ts` promete `string`, e a promessa vale para o payload novo — não para a
+ *  versão da API que está no ar naquele minuto. Front (Vercel) e API (Railway) fazem
+ *  deploy separados, então toda entrega tem uma janela em que a tela nova pede um
+ *  campo que a API antiga ainda não manda. Foi o que produziu "R$ NaN" na tela. */
+function numero(valor: string | undefined): number | null {
+  if (valor === undefined) return null;
+  const convertido = Number(valor);
+  return Number.isFinite(convertido) ? convertido : null;
+}
+
 /** Os totais do mês. Vêm agregados do backend (invariante 9), e não da soma das
  *  linhas da tabela: somar no cliente só acertaria enquanto tudo coubesse na
  *  primeira página, e passaria a mentir em silêncio depois. Por isso o filtro
  *  fixo/variável da tabela não mexe aqui — os cards são sempre o mês inteiro. */
 export function ResumoMes({ inicio, fim }: ResumoMesProps) {
   const { data, isPending, isError } = useDashboard(inicio, fim);
+  // Sem o campo (API antiga no ar), a linha some em vez de virar "Transporte: —":
+  // o total ao lado continua certo, e um recorte ausente não é notícia.
+  const custoTransporte = isError ? null : numero(data?.custo_transporte);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <KpiCard
         rotulo="Custos do mês"
         valor={data && formatarPreco(data.custos)}
-        sub={data && `Transporte: ${formatarPreco(data.custo_transporte)}`}
+        sub={custoTransporte === null ? undefined : `Transporte: ${formatarPreco(custoTransporte)}`}
         carregando={isPending}
         erro={isError}
       />
@@ -51,11 +66,16 @@ interface TransporteDoMesProps {
  *  combustível com a categoria "Transporte" — um zero sem explicação nesta tela
  *  pareceria mês sem gasto, e não categoria esquecida. */
 function TransporteDoMes({ dados, carregando, erro }: TransporteDoMesProps) {
-  // Mesma regra do KpiCard: traço no erro, e nunca um zero inventado. Zero é um
-  // número, e um número errado numa tela de dinheiro é pior que a ausência dele.
-  const vazio = erro ? "—" : "...";
-  const saldo = dados ? Number(dados.transporte) - Number(dados.custo_transporte) : null;
-  const mostrar = !erro && !carregando && dados;
+  // O `erro` zera os três mesmo com `dados` preenchido: a query usa keepPreviousData,
+  // então uma falha depois de trocar o mês deixaria os números do mês ANTERIOR na
+  // tela sob o rótulo do novo — pior que não mostrar nada.
+  const corridas = erro ? null : numero(dados?.transporte);
+  const custo = erro ? null : numero(dados?.custo_transporte);
+  const saldo = corridas !== null && custo !== null ? corridas - custo : null;
+
+  // Mesma regra do KpiCard: traço, e nunca um zero inventado. Zero é um número, e um
+  // número errado numa tela de dinheiro é pior que a ausência dele.
+  const vazio = carregando ? "..." : "—";
 
   return (
     <Card>
@@ -65,20 +85,20 @@ function TransporteDoMes({ dados, carregando, erro }: TransporteDoMesProps) {
       <dl className="mt-2 space-y-1.5 text-sm">
         <Linha
           rotulo="Corridas"
-          valor={mostrar ? `+ ${formatarPreco(dados.transporte)}` : vazio}
-          cor={mostrar ? "text-sucesso" : "text-neutro"}
+          valor={corridas === null ? vazio : `+ ${formatarPreco(corridas)}`}
+          cor={corridas === null ? "text-neutro" : "text-sucesso"}
         />
         <Linha
           rotulo="Custo"
-          valor={mostrar ? `− ${formatarPreco(dados.custo_transporte)}` : vazio}
-          cor={mostrar ? "text-marsala" : "text-neutro"}
+          valor={custo === null ? vazio : `− ${formatarPreco(custo)}`}
+          cor={custo === null ? "text-neutro" : "text-marsala"}
         />
         <div className="border-t border-neutro-light/60 pt-1.5">
           <Linha
             rotulo="Saldo"
-            valor={mostrar && saldo !== null ? formatarSaldo(saldo) : vazio}
+            valor={saldo === null ? vazio : formatarSaldo(saldo)}
             cor={
-              !mostrar || saldo === null || saldo === 0
+              saldo === null || saldo === 0
                 ? "text-escuro"
                 : saldo > 0
                   ? "text-sucesso"
@@ -96,7 +116,7 @@ function TransporteDoMes({ dados, carregando, erro }: TransporteDoMesProps) {
 }
 
 /** O sinal fica fora do `formatarPreco` porque ele não formata negativo: o `-` do
- *  Number cairia depois do "R$" ("R$ -90,00"). */
+ *  Number cairia depois do "R$" ("R$ -80,00"). */
 function formatarSaldo(saldo: number): string {
   const sinal = saldo > 0 ? "+ " : saldo < 0 ? "− " : "";
   return `${sinal}${formatarPreco(Math.abs(saldo))}`;
