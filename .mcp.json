@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "zeuz": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--project",
+        "C:/Users/Diogo/Documents/Projetos/ZEUZ",
+        "zeuz",
+        "serve"
+      ]
+    }
+  }
+}
