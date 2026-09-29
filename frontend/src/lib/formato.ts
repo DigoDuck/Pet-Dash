@@ -14,6 +14,13 @@ export function formatarPrecoCurto(valor: string | number): string {
   return `R$ ${Math.round(numero)}`;
 }
 
+/** Saldo do pacote em palavras. "1/4" deixava a dúvida se era usado ou restante; o
+ *  número do backend é o que RESTA (invariante 4), e a frase diz isso. */
+export function textoSaldo(saldo: number, total: number): string {
+  if (saldo <= 0) return "sem créditos";
+  return `${saldo === 1 ? "resta" : "restam"} ${saldo} de ${total}`;
+}
+
 /** "0.6490" -> "64,9%". O backend manda margem como fração 0–1, não como percentual:
  *  multiplicar aqui e não lá mantém o número financeiro cru na API. */
 export function formatarPercentual(fracao: string | number): string {

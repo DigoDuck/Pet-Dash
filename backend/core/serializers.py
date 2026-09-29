@@ -112,8 +112,19 @@ class PacoteContratadoSerializer(serializers.ModelSerializer):
                 {"data_compra": ["A data da compra não pode estar no futuro."]}
             )
 
+        # A validade é a janela em que o banho sai do pacote (`cobrindo`). Validade antes
+        # do mês da competência é uma janela vazia: o pacote pago nunca seria achado e
+        # todo banho do mês nasceria avulso, faturando o dinheiro de novo. Antes da busca
+        # por validade esse erro de digitação passava despercebido, porque a busca era
+        # pela competência. Comparar com o dia 1 não trava a validade encurtada (27/09).
         pet = attrs.get("pet", getattr(self.instance, "pet", None))
         competencia = attrs.get("competencia", getattr(self.instance, "competencia", None))
+        validade = attrs.get("validade", getattr(self.instance, "validade", None))
+        if competencia and validade and validade < competencia.replace(day=1):
+            raise serializers.ValidationError(
+                {"validade": ["A validade não pode ser anterior ao mês da competência."]}
+            )
+
         if pet and competencia:
             competencia_normalizada = competencia.replace(day=1)
             qs = models.PacoteContratado.objects.filter(

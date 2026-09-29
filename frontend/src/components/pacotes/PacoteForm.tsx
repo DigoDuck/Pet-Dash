@@ -180,6 +180,11 @@ export function PacoteForm({ inicial, aoSalvar, enviando, erro, aoCancelar }: Pa
           error={formState.errors.validade?.message}
           {...register("validade")}
         />
+        {/* A validade é a regra que o formulário de atendimento segue para decidir entre
+            pacote e avulso. Dita aqui, onde ela é editada, ela deixa de ser surpresa. */}
+        <p className="col-span-2 -mt-2 text-xs text-neutro">
+          Banhos até a validade saem deste pacote. Para reagendar, estenda a data.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

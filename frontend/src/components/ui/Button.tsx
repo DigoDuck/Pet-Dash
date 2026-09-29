@@ -1,12 +1,16 @@
 import type { ButtonHTMLAttributes } from "react";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "dangerGhost";
 
 const variants: Record<Variant, string> = {
   primary: "bg-marsala text-creme hover:bg-marsala-light",
   secondary: "border border-marsala text-marsala hover:bg-marsala/5",
   ghost: "text-escuro hover:bg-neutro-light/40",
   danger: "bg-erro text-creme hover:bg-erro/90",
+  // Ação destrutiva repetida em cada linha de tabela. Sólido, o "Excluir" virava o
+  // elemento mais alto da página, nove vezes. A confirmação continua `danger`: é lá que
+  // o peso vermelho pertence.
+  dangerGhost: "text-erro hover:bg-erro/10",
 };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

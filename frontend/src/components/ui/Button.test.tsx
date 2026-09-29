@@ -18,6 +18,13 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "Excluir" })).toHaveClass("bg-erro");
   });
 
+  it("aplica a variante dangerGhost (texto erro, sem fundo sólido)", () => {
+    render(<Button variant="dangerGhost">Excluir</Button>);
+    const botao = screen.getByRole("button", { name: "Excluir" });
+    expect(botao).toHaveClass("text-erro");
+    expect(botao).not.toHaveClass("bg-erro");
+  });
+
   it("repassa disabled para o elemento nativo", () => {
     render(<Button disabled>Salvar</Button>);
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();

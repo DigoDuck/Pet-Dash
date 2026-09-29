@@ -61,21 +61,30 @@ class PetViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="pacote-ativo")
     def pacote_ativo(self, request, pk=None):
+        data_param = request.query_params.get("data")
         competencia_param = request.query_params.get("competencia")
-        if competencia_param:
-            try:
-                competencia = date.fromisoformat(competencia_param).replace(day=1)
-            except ValueError as erro:
-                # Sem o try, uma competência malformada estourava 500. O formulário de
-                # atendimento passou a mandar esse parâmetro em toda busca de pacote,
-                # então o caminho deixou de ser hipotético.
-                raise ParseError("Data inválida; use o formato YYYY-MM-DD.") from erro
-        else:
-            competencia = localdate().replace(day=1)
+        try:
+            # Sem o try, uma data malformada estourava 500. O formulário de atendimento
+            # manda o parâmetro em toda busca de pacote.
+            data = date.fromisoformat(data_param) if data_param else None
+            competencia = date.fromisoformat(competencia_param) if competencia_param else None
+        except ValueError as erro:
+            raise ParseError("Data inválida; use o formato YYYY-MM-DD.") from erro
 
-        pacote = models.PacoteContratado.objects.filter(
-            pet_id=pk, competencia=competencia, ativo=True
-        ).first()
+        if data is None and competencia is not None:
+            # Front antigo (a Vercel publica antes do Railway): só manda a competência.
+            # Mantém a busca exata de antes até o front novo chegar.
+            pacote = models.PacoteContratado.objects.filter(
+                pet_id=pk, competencia=competencia.replace(day=1), ativo=True
+            ).first()
+        else:
+            # O que vale é a validade (ver `cobrindo`). Entre os pacotes que cobrem a
+            # data, o primeiro com crédito; sem crédito em nenhum, devolve mesmo assim o
+            # que vence antes, para a tela dizer "sem saldo" em vez de "sem pacote".
+            cobrindo = list(models.PacoteContratado.objects.cobrindo(pk, data or localdate()))
+            pacote = next((p for p in cobrindo if p.saldo() > 0), None) or next(
+                iter(cobrindo), None
+            )
         if pacote is None:
             return Response(status=204)
         return Response(serializers.PacoteContratadoSerializer(pacote).data)

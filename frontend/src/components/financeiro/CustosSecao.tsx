@@ -114,7 +114,7 @@ export function CustosSecao({ mes }: { mes: string }) {
                             Editar
                           </Button>
                           <Button
-                            variant="danger"
+                            variant="dangerGhost"
                             disabled={excluir.isPending}
                             onClick={() => setAExcluir(custo)}
                           >
