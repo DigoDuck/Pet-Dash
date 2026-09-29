@@ -100,7 +100,12 @@ function Caixa({
   const cor =
     tom === "pacote" ? "border-ouro/50 bg-ouro/10" : "border-neutro-light bg-neutro-light/20";
   return (
-    <div role="status" className={`flex items-start justify-between gap-4 rounded-lg border p-4 ${cor}`}>
+    // Em coluna no celular: lado a lado em 360px, o texto e o "Cobrar como avulso"
+    // se espremiam.
+    <div
+      role="status"
+      className={`flex flex-col items-start gap-2 rounded-lg border p-4 sm:flex-row sm:justify-between sm:gap-4 ${cor}`}
+    >
       <div className="text-sm">
         <p className="font-medium text-escuro">{titulo}</p>
         <p className="mt-0.5 text-escuro-suave">{children}</p>

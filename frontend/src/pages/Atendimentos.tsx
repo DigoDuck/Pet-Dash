@@ -40,11 +40,20 @@ export function Atendimentos() {
         ) : isPending ? (
           <p className="text-sm text-neutro">Carregando...</p>
         ) : resp.count === 0 ? (
-          <EstadoVazio
-            titulo="Nenhum atendimento"
-            descricao="Registre o primeiro atendimento ou ajuste os filtros."
-            acao={<Button onClick={() => navigate("/atendimentos/novo")}>Novo atendimento</Button>}
-          />
+          // Com filtro, o vazio é do filtro, não do spa: "registre o primeiro" ali
+          // sugeria que os atendimentos tinham sumido.
+          data || status ? (
+            <EstadoVazio
+              titulo="Nenhum atendimento com esses filtros"
+              descricao="Troque a data ou escolha Todos em Situação."
+            />
+          ) : (
+            <EstadoVazio
+              titulo="Nenhum atendimento"
+              descricao="Registre o primeiro atendimento do spa."
+              acao={<Button onClick={() => navigate("/atendimentos/novo")}>Novo atendimento</Button>}
+            />
+          )
         ) : (
           <>
             <AtendimentoTabela atendimentos={resp.results} />

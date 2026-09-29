@@ -41,6 +41,12 @@ export function HistoricoTabela({ atendimentos }: { atendimentos: Atendimento[] 
               </td>
               <td className="px-6 py-4 text-right font-mono font-semibold text-escuro">
                 {formatarPreco(a.valor)}
+                {/* Mesmo aviso da lista de atendimentos: o valor do consumo é referência. */}
+                {a.pacote !== null && (
+                  <span className="block font-sans text-xs font-normal text-neutro">
+                    já pago no pacote
+                  </span>
+                )}
               </td>
             </tr>
           ))}
