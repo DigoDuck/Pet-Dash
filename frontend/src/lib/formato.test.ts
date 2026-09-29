@@ -10,6 +10,13 @@ describe("formatarPreco", () => {
   it("formata number, usado nas somas locais", () => {
     expect(formatarPreco(80)).toBe("R$ 80,00");
   });
+
+  // Front e API fazem deploy separados: por alguns minutos a tela nova pede um campo
+  // que a API antiga não manda, e Number(undefined) é NaN.
+  it("campo ausente vira traço, nunca R$ NaN", () => {
+    expect(formatarPreco(undefined as unknown as string)).toBe("—");
+    expect(formatarPrecoCurto("abc")).toBe("—");
+  });
 });
 
 describe("formatarPrecoCurto", () => {
