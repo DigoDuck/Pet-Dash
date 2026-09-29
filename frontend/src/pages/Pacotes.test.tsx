@@ -81,7 +81,7 @@ describe("Pacotes", () => {
     renderizar();
 
     expect(await screen.findByText("Luna")).toBeInTheDocument();
-    expect(screen.getByText("3/4 créditos")).toBeInTheDocument();
+    expect(screen.getByText("restam 3 de 4")).toBeInTheDocument();
     expect(url).toContain("competencia=2026-07-01");
   });
 

@@ -16,7 +16,14 @@ import {
   usePacotes,
 } from "../hooks/usePacotes";
 import { mensagemDeErro } from "../lib/api";
-import { formatarData, inicioDaCompetencia, mesCorrente } from "../lib/competencia";
+import {
+  formatarData,
+  hojeISO,
+  inicioDaCompetencia,
+  mesCorrente,
+  mesDaCompetencia,
+  ultimoDiaDoMes,
+} from "../lib/competencia";
 import { formatarPreco } from "../lib/formato";
 import type { Pacote } from "../lib/types";
 
@@ -104,7 +111,7 @@ export function Pacotes() {
                     <th className="px-2 py-3 font-semibold">Serviço</th>
                     <th className="px-2 py-3 font-semibold">Saldo</th>
                     <th className="px-2 py-3 font-semibold text-right">Valor pago</th>
-                    <th className="px-2 py-3 font-semibold">Validade</th>
+                    <th className="py-3 pr-2 pl-8 font-semibold">Validade</th>
                     <th className="px-6 py-3 font-semibold text-right">Ações</th>
                   </tr>
                 </thead>
@@ -125,14 +132,17 @@ export function Pacotes() {
                       <td className="px-2 py-4 text-right font-mono font-semibold text-escuro">
                         {formatarPreco(p.valor_pago)}
                       </td>
-                      <td className="px-2 py-4 font-mono text-neutro">{formatarData(p.validade)}</td>
+                      <td className="py-4 pr-2 pl-8">
+                        <span className="font-mono text-escuro-suave">{formatarData(p.validade)}</span>
+                        <AvisoValidade pacote={p} />
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" onClick={() => setEmEdicao(p)}>
                             Editar
                           </Button>
                           <Button
-                            variant="danger"
+                            variant="dangerGhost"
                             disabled={excluir.isPending}
                             // reset(): sem isto o diálogo da PRÓXIMA venda abriria já
                             // com o 400 da anterior, acusando uma linha que nem tem
@@ -187,6 +197,25 @@ export function Pacotes() {
       )}
     </div>
   );
+}
+
+/** A validade é o que decide se um banho sai do pacote (invariante 5), então ela
+ *  precisa se explicar na lista: "estendida" é o reagendamento que atravessa o mês e
+ *  "vencido" com crédito sobrando é dinheiro pago que não vai mais virar banho. */
+function AvisoValidade({ pacote }: { pacote: Pacote }) {
+  const fimDoMes = ultimoDiaDoMes(mesDaCompetencia(pacote.competencia));
+  // Datas ISO comparam certo como string: "2026-10-08" > "2026-09-30".
+  if (pacote.validade < hojeISO()) {
+    return (
+      <span className="block text-xs text-neutro">
+        {pacote.saldo > 0 ? `venceu com ${pacote.saldo} sem usar` : "encerrado"}
+      </span>
+    );
+  }
+  if (pacote.validade > fimDoMes) {
+    return <span className="block text-xs font-medium text-escuro-suave">estendida</span>;
+  }
+  return null;
 }
 
 function ModalEdicao({ pacote, aoFechar }: { pacote: Pacote; aoFechar: () => void }) {
