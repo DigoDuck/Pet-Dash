@@ -86,6 +86,13 @@ export function AtendimentoTabela({ atendimentos }: { atendimentos: Atendimento[
                 </td>
                 <td className="px-2 py-4 text-right font-mono font-semibold text-escuro">
                   {formatarPreco(a.valor)}
+                  {/* Consumo de pacote mostra o preço de referência (invariante 2); sem o
+                      aviso, parecia dinheiro entrando igual ao avulso da linha de cima. */}
+                  {a.pacote !== null && (
+                    <span className="block font-sans text-xs font-normal text-neutro">
+                      já pago no pacote
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col items-end gap-2 md:flex-row md:items-center md:justify-end">

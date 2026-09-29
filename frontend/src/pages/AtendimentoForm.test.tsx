@@ -249,6 +249,8 @@ describe("AtendimentoForm", () => {
     expect(await screen.findByText(/Sai do pacote de julho/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adicionar pagamento" })).not.toBeInTheDocument();
     expect(screen.queryByText(/Alertas deste pet/i)).not.toBeInTheDocument();
+    // O valor do consumo é referência; a tela diz que não é cobrado de novo.
+    expect(screen.getByText(/Preço de referência\. Não é cobrado agora/)).toBeInTheDocument();
   });
 
   it("'cobrar como avulso' desvincula e revela os pagamentos", async () => {
@@ -291,7 +293,17 @@ describe("AtendimentoForm", () => {
     renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
     await escolherLuna();
 
-    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
+    // O rótulo diz por que o botão está parado.
+    expect(screen.getByRole("button", { name: "Verificando pacote..." })).toBeDisabled();
+  });
+
+  it("salvar sem escolher o serviço avisa no próprio campo", async () => {
+    server.use(servicosOk(), petsOk());
+
+    renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(await screen.findByText("Escolha o serviço")).toBeInTheDocument();
   });
 
   // A queixa da Patricia: sem pacote, o banho virava avulso sem nenhum aviso.

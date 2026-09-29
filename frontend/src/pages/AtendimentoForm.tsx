@@ -21,6 +21,10 @@ import { mensagemDeErro } from "../lib/api";
 import { hojeISO } from "../lib/competencia";
 import { ACRESCIMO_MANEJO, precoParaPorte, type AtendimentoEntrada, type Porte } from "../lib/types";
 
+const GRUPO = "flex min-w-0 flex-col gap-4";
+const DIVISOR = "border-t border-neutro-light/60 pt-6";
+const LEGENDA = "mb-4 font-display text-xl text-escuro";
+
 const VAZIO: AtendimentoEntrada = {
   pet: 0, servico: 0, pacote: null, data: "", horario: "", valor: "",
   transporte: false, transporte_valor: "0.00", manejo_especial: false,
@@ -201,6 +205,7 @@ export function AtendimentoForm() {
   // `pacote: null` com o pagamento cheio (faturamento em dobro). Na edição o vínculo é o
   // do registro e não depende da busca.
   const aguardandoPacote = !editando && petSelecionado != null && !pacoteAtivo.isSuccess;
+  const salvando = criar.isPending || atualizar.isPending;
 
   return (
     <div className="max-w-2xl">
@@ -208,142 +213,175 @@ export function AtendimentoForm() {
         {editando ? "Editar atendimento" : "Novo atendimento"}
       </h1>
 
-      <form onSubmit={handleSubmit(enviar)} className="mt-6 flex flex-col gap-4" noValidate>
+      {/* Três grupos (quem, quando, quanto) sem mudar a ordem dos campos: eram dez
+          controles numa coluna só, com o mesmo espaçamento, e nada separava o que é
+          agenda do que é dinheiro. */}
+      <form onSubmit={handleSubmit(enviar)} className="mt-6 flex flex-col gap-8" noValidate>
+        <fieldset className={GRUPO}>
+          <legend className={LEGENDA}>Cliente</legend>
+
+          <Controller
+            control={control}
+            name="pet"
+            rules={{ validate: () => petSelecionado != null || "Escolha um pet" }}
+            render={() => (
+              <Combobox
+                label="Pet"
+                itens={itensPet}
+                valor={petSelecionado}
+                carregando={buscaPets.isFetching}
+                placeholder="Buscar por nome do pet ou tutor"
+                aoDigitarBusca={setTextoPet}
+                aoSelecionar={escolherPet}
+                error={formState.errors.pet?.message}
+              />
+            )}
+          />
+
+          {!editando && petSelecionado && (
+            <AlertasDoPet
+              agressivo={petSelecionado.agressivo}
+              otite={petSelecionado.otite}
+              problemaPele={petSelecionado.problema_pele}
+            />
+          )}
+
+          {/* A origem (e o "cobrar como avulso") só se escolhe na criação: na edição o
+              vínculo é o do registro e trocá-lo depois reescreveria faturamento passado.
+              Espera a busca terminar: durante o fetch `pacote` é null e a caixa piscaria
+              "sem pacote" antes de achar o pacote. */}
+          {!editando && petSelecionado && pacoteAtivo.isSuccess && (
+            <OrigemAtendimento
+              pacote={pacote}
+              usaPacote={usaPacote}
+              nomePet={pacote?.pet_nome ?? petSelecionado.rotulo.split(" · ")[0]}
+              data={dataConsulta}
+              aoCobrarAvulso={() => setCobrarAvulso(true)}
+              aoUsarPacote={() => setCobrarAvulso(false)}
+            />
+          )}
+          {!editando && petSelecionado && pacoteAtivo.isError && (
+            <p role="alert" className="text-sm text-erro">
+              Não consegui verificar se {petSelecionado.rotulo.split(" · ")[0]} tem pacote.{" "}
+              <button
+                type="button"
+                onClick={() => pacoteAtivo.refetch()}
+                className="font-medium underline underline-offset-2"
+              >
+                Tentar de novo
+              </button>
+            </p>
+          )}
+          {editando && pacoteVinculado != null && (
+            <p className="text-sm text-neutro">
+              Este banho saiu do pacote e já foi pago na venda. Isso não muda ao editar.
+            </p>
+          )}
+
+        </fieldset>
+
+        <fieldset className={`${GRUPO} ${DIVISOR}`}>
+          <legend className={LEGENDA}>Serviço e horário</legend>
+
+          <Select
+            label="Serviço"
+            error={formState.errors.servico?.message}
+            {...register("servico", {
+              // "Selecione..." tem valor 0 e passava direto para o backend, que devolvia
+              // um erro genérico longe do campo.
+              validate: (v) => Number(v) > 0 || "Escolha o serviço",
+              // Só sugere na criação. Na edição, `valor` é o snapshot do que ela cobrou
+              // (invariante 7); trocar o serviço não pode reescrevê-lo — ela ajusta à mão.
+              onChange: (e) => {
+                if (!editando) sugerirValor(e.target.value, petSelecionado?.porte ?? "", manejoEspecial);
+              },
+            })}
+          >
+            <option value="0">Selecione...</option>
+            {listaServicos.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nome}
+              </option>
+            ))}
+          </Select>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Data" type="date" {...register("data")} />
+            <Input label="Horário" type="time" {...register("horario")} />
+          </div>
+
+          <Checkbox
+            label="Manejo especial (pet agressivo ou contenção) · +40%"
+            {...register("manejo_especial", {
+              onChange: (e) => {
+                if (!editando) sugerirValor(servicoAtual, petSelecionado?.porte ?? "", e.target.checked);
+              },
+            })}
+          />
+
+        </fieldset>
+
+        <fieldset className={`${GRUPO} ${DIVISOR}`}>
+          <legend className={LEGENDA}>Cobrança</legend>
+
+          {/* "Valor do serviço", e não "Valor": a tela tem também o valor do transporte e
+              o valor de cada pagamento. Três campos chamados "Valor" confundem a Patricia
+              e o leitor de tela igualmente. */}
+          <Input label="Valor do serviço" inputMode="decimal" {...register("valor")} />
+          {/* No consumo, o valor é só referência (invariante 2: nunca zerado). Sem esta
+              linha, "R$ 65,00" no campo parecia dinheiro sendo cobrado de novo. */}
+          {usaPacote && (
+            <p className="-mt-2 text-xs text-escuro-suave">
+              Preço de referência. Não é cobrado agora: o banho já foi pago na venda do pacote.
+            </p>
+          )}
+
+          <Checkbox label="Leva e traz (transporte)" {...register("transporte")} />
+          {transporte && (
+            <Input label="Valor do transporte" inputMode="decimal" {...register("transporte_valor")} />
+          )}
+
+          {/* "Situação" e não "Status", e cada opção diz o que faz com o crédito: é o
+              núcleo do dinheiro (invariante 4) e antes a tela não dizia. Os `value` são
+              os da API. */}
+          <Select label="Situação" {...register("status")}>
+            <option value="Pendente">Pendente (agendado, segura o crédito do pacote)</option>
+            <option value="Liberado">Liberado (banho feito)</option>
+            <option value="Cancelado">Cancelado (não vai acontecer, devolve o crédito)</option>
+          </Select>
+
+          {/* No pacote, o banho já foi pago na venda — mas a corrida não, e ela é
+              cobrada por viagem. Esconder os pagamentos sempre que houver pacote era
+              o buraco por onde o dinheiro do transporte sumia sem lançamento.
+              No avulso o bloco aparece sempre, mesmo antes de digitar o valor: gatear
+              por `valorDevido > 0` esconderia os pagamentos do formulário em branco. */}
+          {mostrarPagamentos && (
+            <PagamentosField
+              control={control}
+              register={register}
+              watch={watch}
+              valorDevido={valorDevido}
+              soTransporte={usaPacote}
+            />
+          )}
+        </fieldset>
+
+        {/* O erro fica junto do botão: no topo, no celular, ele aparecia fora da tela e
+            parecia que o Salvar não tinha feito nada. */}
         {erro && (
           <p role="alert" className="rounded-lg bg-erro/10 px-4 py-3 text-sm text-erro">
             {mensagemDeErro(erro)}
           </p>
         )}
 
-        <Controller
-          control={control}
-          name="pet"
-          rules={{ validate: () => petSelecionado != null || "Escolha um pet" }}
-          render={() => (
-            <Combobox
-              label="Pet"
-              itens={itensPet}
-              valor={petSelecionado}
-              carregando={buscaPets.isFetching}
-              placeholder="Buscar por nome do pet ou tutor"
-              aoDigitarBusca={setTextoPet}
-              aoSelecionar={escolherPet}
-              error={formState.errors.pet?.message}
-            />
-          )}
-        />
-
-        {!editando && petSelecionado && (
-          <AlertasDoPet
-            agressivo={petSelecionado.agressivo}
-            otite={petSelecionado.otite}
-            problemaPele={petSelecionado.problema_pele}
-          />
-        )}
-
-        {/* A origem (e o "cobrar como avulso") só se escolhe na criação: na edição o
-            vínculo é o do registro e trocá-lo depois reescreveria faturamento passado.
-            Espera a busca terminar: durante o fetch `pacote` é null e a caixa piscaria
-            "sem pacote" antes de achar o pacote. */}
-        {!editando && petSelecionado && pacoteAtivo.isSuccess && (
-          <OrigemAtendimento
-            pacote={pacote}
-            usaPacote={usaPacote}
-            nomePet={pacote?.pet_nome ?? petSelecionado.rotulo.split(" · ")[0]}
-            data={dataConsulta}
-            aoCobrarAvulso={() => setCobrarAvulso(true)}
-            aoUsarPacote={() => setCobrarAvulso(false)}
-          />
-        )}
-        {!editando && petSelecionado && pacoteAtivo.isError && (
-          <p role="alert" className="text-sm text-erro">
-            Não consegui verificar se {petSelecionado.rotulo.split(" · ")[0]} tem pacote.{" "}
-            <button
-              type="button"
-              onClick={() => pacoteAtivo.refetch()}
-              className="font-medium underline underline-offset-2"
-            >
-              Tentar de novo
-            </button>
-          </p>
-        )}
-        {editando && pacoteVinculado != null && (
-          <p className="text-sm text-neutro">
-            Este banho saiu do pacote e já foi pago na venda. Isso não muda ao editar.
-          </p>
-        )}
-
-        <Select
-          label="Serviço"
-          {...register("servico", {
-            // Só sugere na criação. Na edição, `valor` é o snapshot do que ela cobrou
-            // (invariante 7); trocar o serviço não pode reescrevê-lo — ela ajusta à mão.
-            onChange: (e) => {
-              if (!editando) sugerirValor(e.target.value, petSelecionado?.porte ?? "", manejoEspecial);
-            },
-          })}
-        >
-          <option value="0">Selecione...</option>
-          {listaServicos.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.nome}
-            </option>
-          ))}
-        </Select>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Input label="Data" type="date" {...register("data")} />
-          <Input label="Horário" type="time" {...register("horario")} />
-        </div>
-
-        <Checkbox
-          label="Manejo especial (pet agressivo ou contenção) · +40%"
-          {...register("manejo_especial", {
-            onChange: (e) => {
-              if (!editando) sugerirValor(servicoAtual, petSelecionado?.porte ?? "", e.target.checked);
-            },
-          })}
-        />
-
-        {/* "Valor do serviço", e não "Valor": a tela tem também o valor do transporte e
-            o valor de cada pagamento. Três campos chamados "Valor" confundem a Patricia
-            e o leitor de tela igualmente. */}
-        <Input label="Valor do serviço" inputMode="decimal" {...register("valor")} />
-
-        <Checkbox label="Leva e traz (transporte)" {...register("transporte")} />
-        {transporte && (
-          <Input label="Valor do transporte" inputMode="decimal" {...register("transporte_valor")} />
-        )}
-
-        {/* "Situação" e não "Status", e cada opção diz o que faz com o crédito: é o
-            núcleo do dinheiro (invariante 4) e antes a tela não dizia. Os `value` são
-            os da API. */}
-        <Select label="Situação" {...register("status")}>
-          <option value="Pendente">Pendente (agendado, segura o crédito do pacote)</option>
-          <option value="Liberado">Liberado (banho feito)</option>
-          <option value="Cancelado">Cancelado (não vai acontecer, devolve o crédito)</option>
-        </Select>
-
-        {/* No pacote, o banho já foi pago na venda — mas a corrida não, e ela é
-            cobrada por viagem. Esconder os pagamentos sempre que houver pacote era
-            o buraco por onde o dinheiro do transporte sumia sem lançamento.
-            No avulso o bloco aparece sempre, mesmo antes de digitar o valor: gatear
-            por `valorDevido > 0` esconderia os pagamentos do formulário em branco. */}
-        {mostrarPagamentos && (
-          <PagamentosField
-            control={control}
-            register={register}
-            watch={watch}
-            valorDevido={valorDevido}
-          />
-        )}
-
-        <div className="mt-2 flex justify-end gap-2">
+        <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={() => navigate("/atendimentos")}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={criar.isPending || atualizar.isPending || aguardandoPacote}>
-            Salvar
+          {/* O rótulo diz por que o botão está parado; desabilitado e mudo, ela tocava
+              de novo achando que não tinha pegado. */}
+          <Button type="submit" disabled={salvando || aguardandoPacote}>
+            {salvando ? "Salvando..." : aguardandoPacote ? "Verificando pacote..." : "Salvar"}
           </Button>
         </div>
       </form>

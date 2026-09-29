@@ -5,14 +5,20 @@ import { describe, expect, it } from "vitest";
 import type { AtendimentoEntrada } from "../../lib/types";
 import { PagamentosField } from "./PagamentosField";
 
-function Host({ devido }: { devido: number }) {
+function Host({ devido, soTransporte }: { devido: number; soTransporte?: boolean }) {
   // Tipar o form: o control precisa ser Control<AtendimentoEntrada> para casar
   // com o PagamentosField (senão o tsc -b quebra o build — os testes entram no include).
   const { control, register, watch } = useForm<AtendimentoEntrada>({
     defaultValues: { pagamentos: [{ metodo: "Pix", valor: "" }] },
   });
   return (
-    <PagamentosField control={control} register={register} watch={watch} valorDevido={devido} />
+    <PagamentosField
+      control={control}
+      register={register}
+      watch={watch}
+      valorDevido={devido}
+      soTransporte={soTransporte}
+    />
   );
 }
 
@@ -55,5 +61,18 @@ describe("PagamentosField", () => {
     await userEvent.type(screen.getAllByLabelText("Valor")[0], "65.00");
 
     expect(screen.getByText(/falta/i)).toHaveTextContent("Falta R$ 20,00");
+  });
+
+  it("nada lançado ainda não acusa falta em vermelho", () => {
+    render(<Host devido={120} />);
+
+    expect(screen.getByText("Adicione como foi pago")).toBeInTheDocument();
+    expect(screen.queryByText(/falta/i)).not.toBeInTheDocument();
+  });
+
+  it("no consumo de pacote diz que só o transporte é cobrado", () => {
+    render(<Host devido={20} soTransporte />);
+
+    expect(screen.getByText("Total a cobrar (só o transporte):")).toBeInTheDocument();
   });
 });

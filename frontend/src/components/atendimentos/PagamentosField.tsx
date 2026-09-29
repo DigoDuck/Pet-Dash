@@ -10,6 +10,8 @@ interface PagamentosFieldProps {
   /** Serviço + transporte no avulso; só o transporte no consumo de pacote. Quem
    *  calcula é o form, que é quem sabe se o pacote está sendo usado. */
   valorDevido: number;
+  /** Consumo de pacote: o banho já foi pago, o que se cobra é só a corrida. */
+  soTransporte?: boolean;
 }
 
 // O valor é a chave da API ("Cartao"); o rótulo é o que ela lê.
@@ -19,7 +21,13 @@ const METODOS = [
   { valor: "Dinheiro", rotulo: "Dinheiro" },
 ] as const;
 
-export function PagamentosField({ control, register, watch, valorDevido }: PagamentosFieldProps) {
+export function PagamentosField({
+  control,
+  register,
+  watch,
+  valorDevido,
+  soTransporte = false,
+}: PagamentosFieldProps) {
   const { fields, append, remove } = useFieldArray({ control, name: "pagamentos" });
   const pagamentos = watch("pagamentos") ?? [];
 
@@ -83,9 +91,14 @@ export function PagamentosField({ control, register, watch, valorDevido }: Pagam
           depois de lançar o valor do banho e não entende que o que falta é a corrida. */}
       <div className="flex items-center justify-between text-sm">
         <span className="text-neutro">
-          Total a cobrar: <span className="font-mono text-escuro">{formatarPreco(valorDevido)}</span>
+          {soTransporte ? "Total a cobrar (só o transporte)" : "Total a cobrar"}:{" "}
+          <span className="font-mono text-escuro">{formatarPreco(valorDevido)}</span>
         </span>
-        {diferenca === 0 ? (
+        {/* Nada lançado ainda não é erro: o "Falta" vermelho no formulário em branco
+            acusava antes de ela fazer qualquer coisa. */}
+        {soma === 0 && diferenca > 0 ? (
+          <span className="text-neutro">Adicione como foi pago</span>
+        ) : diferenca === 0 ? (
           <span className="text-sucesso">Soma confere</span>
         ) : diferenca > 0 ? (
           <span className="text-erro">Falta {formatarPreco(diferenca)}</span>
