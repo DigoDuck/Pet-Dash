@@ -1,6 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { renderizarComProvedores } from "../test/utils";
 import { server } from "../test/msw/server";
@@ -246,7 +246,7 @@ describe("AtendimentoForm", () => {
     renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
     await escolherLuna();
 
-    expect(await screen.findByText("Pacote Fidelidade vinculado")).toBeInTheDocument();
+    expect(await screen.findByText(/Sai do pacote de julho/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adicionar pagamento" })).not.toBeInTheDocument();
     expect(screen.queryByText(/Alertas deste pet/i)).not.toBeInTheDocument();
   });
@@ -265,12 +265,72 @@ describe("AtendimentoForm", () => {
 
     renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
     await escolherLuna();
-    await screen.findByText("Pacote Fidelidade vinculado");
+    await screen.findByText(/Sai do pacote de julho/);
 
     await userEvent.click(screen.getByRole("button", { name: "Cobrar como avulso" }));
 
     expect(screen.getByRole("button", { name: "Adicionar pagamento" })).toBeInTheDocument();
-    expect(screen.queryByText("Pacote Fidelidade vinculado")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sai do pacote de julho/)).not.toBeInTheDocument();
+
+    // O caminho de volta: antes, só trocando o pet de novo.
+    await userEvent.click(screen.getByRole("button", { name: "Usar o pacote" }));
+    expect(screen.getByText(/Sai do pacote de julho/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Adicionar pagamento" })).not.toBeInTheDocument();
+  });
+
+  it("não deixa salvar enquanto a busca do pacote não volta", async () => {
+    server.use(
+      servicosOk(),
+      petsOk(),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, async () => {
+        await delay("infinite");
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
+    await escolherLuna();
+
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
+  });
+
+  // A queixa da Patricia: sem pacote, o banho virava avulso sem nenhum aviso.
+  it("pet sem pacote valendo na data avisa que o banho é avulso", async () => {
+    server.use(
+      servicosOk(),
+      petsOk(),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
+    await escolherLuna();
+
+    expect(await screen.findByText("Cobrado como avulso")).toBeInTheDocument();
+    expect(screen.getByText(/não tem pacote valendo em/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /registre a venda em Pacotes/ })).toHaveAttribute(
+      "href",
+      "/pacotes",
+    );
+  });
+
+  // Validade estendida: o pacote de setembro vale em outubro. Buscar pelo mês perdia isso.
+  it("busca o pacote pela data do banho, não só pelo mês", async () => {
+    let url: URL | null = null;
+    server.use(
+      servicosOk(),
+      petsOk(),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, ({ request }) => {
+        url = new URL(request.url);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
+    await userEvent.type(screen.getByLabelText("Data"), "2026-10-05");
+    await escolherLuna();
+
+    await waitFor(() => expect(url?.searchParams.get("data")).toBe("2026-10-05"));
+    expect(url!.searchParams.get("competencia")).toBe("2026-10-01");
   });
 
   it("pet com pacote saldo 0 cai em avulso com aviso", async () => {
@@ -288,7 +348,7 @@ describe("AtendimentoForm", () => {
     renderizarComProvedores(<AtendimentoForm />, { rota: "/atendimentos/novo", caminho: "/atendimentos/novo" });
     await escolherLuna();
 
-    expect(await screen.findByText(/sem saldo/i)).toBeInTheDocument();
+    expect(await screen.findByText(/já usou os 4 créditos/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Adicionar pagamento" })).toBeInTheDocument();
   });
 

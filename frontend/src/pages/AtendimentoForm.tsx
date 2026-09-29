@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { AlertasDoPet } from "../components/atendimentos/AlertasDoPet";
-import { PacoteAtivoBanner } from "../components/atendimentos/PacoteAtivoBanner";
+import { OrigemAtendimento } from "../components/atendimentos/OrigemAtendimento";
 import { PagamentosField } from "../components/atendimentos/PagamentosField";
 import { Button } from "../components/ui/Button";
 import { Checkbox } from "../components/ui/Checkbox";
@@ -18,7 +18,7 @@ import { usePacoteAtivo } from "../hooks/usePacoteAtivo";
 import { useBuscaPets } from "../hooks/usePets";
 import { useServicos } from "../hooks/useServicos";
 import { mensagemDeErro } from "../lib/api";
-import { inicioDaCompetencia, mesDaCompetencia } from "../lib/competencia";
+import { hojeISO } from "../lib/competencia";
 import { ACRESCIMO_MANEJO, precoParaPorte, type AtendimentoEntrada, type Porte } from "../lib/types";
 
 const VAZIO: AtendimentoEntrada = {
@@ -57,15 +57,15 @@ export function AtendimentoForm() {
   const { register, handleSubmit, control, watch, setValue, reset, formState } =
     useForm<AtendimentoEntrada>({ defaultValues: VAZIO });
 
-  // O pacote é procurado na competência do ATENDIMENTO, não na de hoje. A Patricia
-  // lança com atraso (vem de planilha): em 1º de julho, o banho de 30 de junho tem que
-  // consultar o pacote de junho. Consultar o de julho fazia o banho nascer avulso — e o
-  // dinheiro de junho ser faturado duas vezes.
-  const dataAtual = watch("data");
-  const competencia = dataAtual ? inicioDaCompetencia(mesDaCompetencia(dataAtual)) : "";
+  // O pacote é procurado na data do ATENDIMENTO, não na de hoje. A Patricia lança com
+  // atraso (vem de planilha): em 1º de julho, o banho de 30 de junho tem que achar o
+  // pacote que valia em 30 de junho. E é a data, não o mês, porque a validade estendida
+  // (reagendamento) faz o pacote de setembro valer em outubro. Sem data, vale hoje: é o
+  // default que o backend grava.
+  const dataConsulta = watch("data") || hojeISO();
 
   const buscaPets = useBuscaPets(termoPet);
-  const pacoteAtivo = usePacoteAtivo(petSelecionado?.id ?? null, competencia);
+  const pacoteAtivo = usePacoteAtivo(petSelecionado?.id ?? null, dataConsulta);
   const servicos = useServicos("", false);
   const criar = useCriarAtendimento();
   const existente = useAtendimento(editando ? Number(id) : 0);
@@ -83,7 +83,7 @@ export function AtendimentoForm() {
       // do registro, e a sugestão só sobrescreve se ela trocar o serviço.
       //
       // Na edição os flags ficam em `false` de propósito: o payload do atendimento não os
-      // traz, e o banner é ferramenta de decisão na criação. Igual ao PacoteAtivoBanner,
+      // traz, e o banner é ferramenta de decisão na criação. Igual ao OrigemAtendimento,
       // que também só existe lá.
       setPetSelecionado({
         id: existente.data.pet,
@@ -196,6 +196,12 @@ export function AtendimentoForm() {
   // clicava Salvar e não acontecia nada — sem navegação, sem mensagem, sem pista.
   const erro = criar.error ?? atualizar.error;
 
+  // Enquanto a busca do pacote não volta, `pacote` é null e o banho sairia avulso. Como a
+  // busca agora roda a cada troca de data, salvar logo depois de mexer na data mandava
+  // `pacote: null` com o pagamento cheio (faturamento em dobro). Na edição o vínculo é o
+  // do registro e não depende da busca.
+  const aguardandoPacote = !editando && petSelecionado != null && !pacoteAtivo.isSuccess;
+
   return (
     <div className="max-w-2xl">
       <h1 className="font-display text-3xl text-escuro">
@@ -235,13 +241,31 @@ export function AtendimentoForm() {
           />
         )}
 
-        {/* O banner (e o "cobrar como avulso") só existe na criação: na edição o vínculo
-            é o do registro e trocá-lo depois reescreveria faturamento passado. */}
-        {!editando && petSelecionado && usaPacote && pacote && (
-          <PacoteAtivoBanner pacote={pacote} aoCobrarAvulso={() => setCobrarAvulso(true)} />
+        {/* A origem (e o "cobrar como avulso") só se escolhe na criação: na edição o
+            vínculo é o do registro e trocá-lo depois reescreveria faturamento passado.
+            Espera a busca terminar: durante o fetch `pacote` é null e a caixa piscaria
+            "sem pacote" antes de achar o pacote. */}
+        {!editando && petSelecionado && pacoteAtivo.isSuccess && (
+          <OrigemAtendimento
+            pacote={pacote}
+            usaPacote={usaPacote}
+            nomePet={pacote?.pet_nome ?? petSelecionado.rotulo.split(" · ")[0]}
+            data={dataConsulta}
+            aoCobrarAvulso={() => setCobrarAvulso(true)}
+            aoUsarPacote={() => setCobrarAvulso(false)}
+          />
         )}
-        {!editando && petSelecionado && pacote != null && pacote.saldo === 0 && (
-          <p className="text-sm text-erro">Pacote sem saldo neste mês; cobrando como avulso.</p>
+        {!editando && petSelecionado && pacoteAtivo.isError && (
+          <p role="alert" className="text-sm text-erro">
+            Não consegui verificar se {petSelecionado.rotulo.split(" · ")[0]} tem pacote.{" "}
+            <button
+              type="button"
+              onClick={() => pacoteAtivo.refetch()}
+              className="font-medium underline underline-offset-2"
+            >
+              Tentar de novo
+            </button>
+          </p>
         )}
         {editando && pacoteVinculado != null && (
           <p className="text-sm text-neutro">
@@ -315,7 +339,7 @@ export function AtendimentoForm() {
           <Button type="button" variant="ghost" onClick={() => navigate("/atendimentos")}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={criar.isPending || atualizar.isPending}>
+          <Button type="submit" disabled={criar.isPending || atualizar.isPending || aguardandoPacote}>
             Salvar
           </Button>
         </div>
