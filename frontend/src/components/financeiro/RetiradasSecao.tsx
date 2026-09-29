@@ -63,8 +63,8 @@ export function RetiradasSecao({ mes }: { mes: string }) {
                 <thead>
                   <tr className="text-left text-[10px] tracking-[0.12em] text-neutro uppercase">
                     <th className="px-6 py-3 font-semibold">Descrição</th>
-                    <th className="px-2 py-3 font-semibold">Tipo</th>
-                    <th className="px-2 py-3 font-semibold">Data</th>
+                    <th className="hidden px-2 py-3 font-semibold md:table-cell">Tipo</th>
+                    <th className="hidden px-2 py-3 font-semibold md:table-cell">Data</th>
                     <th className="px-2 py-3 font-semibold text-right">Valor</th>
                     <th className="px-6 py-3 font-semibold text-right">Ações</th>
                   </tr>
@@ -75,16 +75,25 @@ export function RetiradasSecao({ mes }: { mes: string }) {
                       key={retirada.id}
                       className="border-t border-neutro-light/60 transition-colors hover:bg-creme/50"
                     >
-                      <td className="px-6 py-4 font-medium text-escuro">{retirada.descricao}</td>
-                      <td className="px-2 py-4 text-neutro">{retirada.tipo || "—"}</td>
-                      <td className="px-2 py-4 font-mono text-neutro">
+                      {/* Abaixo de `md`, Tipo e Data se dobram aqui (ver CustosSecao). */}
+                      <td className="px-6 py-4">
+                        <span className="font-medium text-escuro">{retirada.descricao}</span>
+                        <span className="block text-xs text-neutro md:hidden">
+                          <span className="font-mono">{formatarData(retirada.data)}</span>
+                          {retirada.tipo && ` · ${retirada.tipo}`}
+                        </span>
+                      </td>
+                      <td className="hidden px-2 py-4 text-neutro md:table-cell">
+                        {retirada.tipo || "—"}
+                      </td>
+                      <td className="hidden px-2 py-4 font-mono text-neutro md:table-cell">
                         {formatarData(retirada.data)}
                       </td>
                       <td className="px-2 py-4 text-right font-mono font-semibold text-escuro">
                         {formatarPreco(retirada.valor)}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex flex-col items-end gap-2 md:flex-row md:justify-end">
                           <Button variant="ghost" onClick={() => setEmEdicao(retirada)}>
                             Editar
                           </Button>

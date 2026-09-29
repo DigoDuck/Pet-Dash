@@ -108,10 +108,12 @@ export function Pacotes() {
                 <thead>
                   <tr className="text-left text-[10px] tracking-[0.12em] text-neutro uppercase">
                     <th className="px-6 py-3 font-semibold">Pet</th>
-                    <th className="px-2 py-3 font-semibold">Serviço</th>
+                    <th className="hidden px-2 py-3 font-semibold md:table-cell">Serviço</th>
                     <th className="px-2 py-3 font-semibold">Saldo</th>
-                    <th className="px-2 py-3 font-semibold text-right">Valor pago</th>
-                    <th className="py-3 pr-2 pl-8 font-semibold">Validade</th>
+                    <th className="hidden px-2 py-3 text-right font-semibold md:table-cell">
+                      Valor pago
+                    </th>
+                    <th className="hidden py-3 pr-2 pl-8 font-semibold md:table-cell">Validade</th>
                     <th className="px-6 py-3 font-semibold text-right">Ações</th>
                   </tr>
                 </thead>
@@ -124,20 +126,27 @@ export function Pacotes() {
                       <td className="px-6 py-4">
                         <span className="font-medium text-escuro">{p.pet_nome}</span>
                         <span className="block text-xs text-neutro">{p.tutor_nome}</span>
+                        {/* No celular ficam Pet, Saldo e Ações, o que ela confere no
+                            balcão. A validade (que decide se o banho sai do pacote)
+                            desce para cá em vez de sumir. */}
+                        <span className="mt-1 block text-xs text-escuro-suave md:hidden">
+                          até <span className="font-mono">{formatarData(p.validade)}</span>
+                          <AvisoValidade pacote={p} />
+                        </span>
                       </td>
-                      <td className="px-2 py-4 text-escuro">{p.servico_nome}</td>
+                      <td className="hidden px-2 py-4 text-escuro md:table-cell">{p.servico_nome}</td>
                       <td className="px-2 py-4">
                         <SaldoBadge saldo={p.saldo} total={p.qtd_total} />
                       </td>
-                      <td className="px-2 py-4 text-right font-mono font-semibold text-escuro">
+                      <td className="hidden px-2 py-4 text-right font-mono font-semibold text-escuro md:table-cell">
                         {formatarPreco(p.valor_pago)}
                       </td>
-                      <td className="py-4 pr-2 pl-8">
+                      <td className="hidden py-4 pr-2 pl-8 md:table-cell">
                         <span className="font-mono text-escuro-suave">{formatarData(p.validade)}</span>
                         <AvisoValidade pacote={p} />
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex flex-col items-end gap-2 md:flex-row md:justify-end">
                           <Button variant="ghost" onClick={() => setEmEdicao(p)}>
                             Editar
                           </Button>

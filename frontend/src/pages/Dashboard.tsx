@@ -79,18 +79,13 @@ export function Dashboard() {
           />
         </div>
 
-        {/* Os KPIs não somem no erro: o KpiCard mostra "—" e a tela continua de pé. */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:col-span-7">
+        {/* Os KPIs não somem no erro: o KpiCard mostra "—" e a tela continua de pé.
+            Sem card de Lucro: o destaque ao lado já diz "Lucro de X · margem de Y", e o
+            mesmo número duas vezes na primeira dobra só somava leitura. */}
+        <div className="grid gap-4 sm:grid-cols-3 lg:col-span-7 lg:grid-cols-1 xl:grid-cols-3">
           <KpiCard
             rotulo="Custos"
             valor={resumo.data && formatarPreco(resumo.data.custos)}
-            carregando={resumo.isPending}
-            erro={resumo.isError}
-          />
-          <KpiCard
-            rotulo="Lucro"
-            valor={resumo.data && formatarPreco(resumo.data.lucro)}
-            sub={resumo.data && `Margem de ${formatarPercentual(resumo.data.margem)}`}
             carregando={resumo.isPending}
             erro={resumo.isError}
           />
@@ -117,7 +112,7 @@ export function Dashboard() {
           </Bloco>
         </div>
         <div className="lg:col-span-4">
-          <Bloco consulta={resumo} rotuloErro="Não foi possível carregar as despesas.">
+          <Bloco consulta={resumo} rotuloErro="Não foi possível carregar os custos.">
             {(dados) => <CustosPorCategoria categorias={dados.custos_por_categoria} />}
           </Bloco>
         </div>
@@ -132,7 +127,8 @@ export function Dashboard() {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1">
           <KpiCard
-            rotulo="Transporte"
+            // O mesmo nome que a tela de Custos e retiradas usa ("Corridas").
+            rotulo="Corridas do triciclo"
             valor={resumo.data && formatarPreco(resumo.data.transporte)}
             sub="Já incluso no faturamento"
             carregando={resumo.isPending}
@@ -157,7 +153,14 @@ export function Dashboard() {
             // Sem base de comparação o card mostra "—". O `carregando` cobre o tempo
             // da série; depois disso, ausência de crescimento é um fato, não um erro.
             valor={crescimento ? crescimento.rotulo : serie.isSuccess ? "—" : undefined}
-            sub={crescimento ? `Faturamento vs ${crescimento.mesAnterior}` : undefined}
+            // Um traço sem frase parecia erro; sem base, a falta é explicada.
+            sub={
+              crescimento
+                ? `Faturamento comparado a ${crescimento.mesAnterior}`
+                : serie.isSuccess
+                  ? "Sem mês anterior para comparar"
+                  : undefined
+            }
             carregando={serie.isPending}
             erro={serie.isError}
           />

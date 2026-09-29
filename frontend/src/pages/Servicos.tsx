@@ -79,7 +79,7 @@ export function Servicos() {
                 <thead>
                   <tr className="text-left text-[10px] tracking-[0.12em] text-neutro uppercase">
                     <th className="px-6 py-3 font-semibold">Serviço</th>
-                    <th className="px-2 py-3 font-semibold">Tipo</th>
+                    <th className="hidden px-2 py-3 font-semibold md:table-cell">Tipo</th>
                     <th className="px-2 py-3 font-semibold text-right">Preço</th>
                     <th className="px-6 py-3 font-semibold text-right">Ações</th>
                   </tr>
@@ -99,8 +99,12 @@ export function Servicos() {
                             Inativo
                           </Badge>
                         )}
+                        {/* Abaixo de `md` o tipo desce para cá e a coluna sai. */}
+                        <span className="block text-xs text-neutro md:hidden">
+                          {servico.is_pacote ? `Pacote · ${servico.creditos} créditos` : "Avulso"}
+                        </span>
                       </td>
-                      <td className="px-2 py-4">
+                      <td className="hidden px-2 py-4 md:table-cell">
                         <Badge variant={servico.is_pacote ? "vip" : "neutro"}>
                           {servico.is_pacote ? `Pacote · ${servico.creditos} créditos` : "Avulso"}
                         </Badge>
@@ -109,7 +113,7 @@ export function Servicos() {
                         {formatarPreco(servico.preco_padrao)}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex flex-col items-end gap-2 md:flex-row md:justify-end">
                           <Button variant="ghost" onClick={() => setEmEdicao(servico)}>
                             Editar
                           </Button>

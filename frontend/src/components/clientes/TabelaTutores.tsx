@@ -9,7 +9,7 @@ export function TabelaTutores({ tutores }: { tutores: Tutor[] }) {
           <tr className="text-left text-[10px] tracking-[0.12em] text-neutro uppercase">
             <th className="px-6 py-3 font-semibold">Tutor</th>
             <th className="px-2 py-3 font-semibold">Telefone</th>
-            <th className="px-6 py-3 font-semibold">E-mail</th>
+            <th className="hidden px-6 py-3 font-semibold md:table-cell">E-mail</th>
           </tr>
         </thead>
         <tbody>
@@ -20,14 +20,14 @@ export function TabelaTutores({ tutores }: { tutores: Tutor[] }) {
             >
               <td className="px-6 py-4">
                 <Link to={`/clientes/${tutor.id}`} className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-marsala font-semibold text-creme">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutro-light/40 font-semibold text-escuro">
                     {tutor.nome.charAt(0).toUpperCase()}
                   </span>
                   <span className="font-medium text-escuro">{tutor.nome}</span>
                 </Link>
               </td>
               <td className="px-2 py-4 font-mono text-neutro">{tutor.telefone}</td>
-              <td className="px-6 py-4 text-neutro">{tutor.email || "—"}</td>
+              <td className="hidden px-6 py-4 text-neutro md:table-cell">{tutor.email || "—"}</td>
             </tr>
           ))}
         </tbody>
