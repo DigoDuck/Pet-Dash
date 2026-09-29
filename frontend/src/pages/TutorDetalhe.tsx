@@ -35,8 +35,8 @@ export function TutorDetalhe() {
 
   return (
     <div>
-      <nav className="text-xs text-neutro">
-        <Link to="/clientes" className="hover:text-marsala">
+      <nav aria-label="Caminho" className="text-sm text-neutro">
+        <Link to="/clientes" className="inline-flex items-center hover:text-marsala pointer-coarse:min-h-11">
           Clientes
         </Link>{" "}
         / {tutor.data.nome}
@@ -55,7 +55,7 @@ export function TutorDetalhe() {
             Editar
           </Button>
           <Button
-            variant="danger"
+            variant="dangerGhost"
             onClick={() => setDesativando(true)}
             disabled={desativar.isPending}
           >

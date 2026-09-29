@@ -13,7 +13,7 @@ export function Financeiro() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-display text-3xl text-escuro">Financeiro</h1>
+        <h1 className="font-display text-3xl text-escuro">Custos e retiradas</h1>
         <SeletorMes valor={mes} aoMudar={setMes} />
       </div>
 

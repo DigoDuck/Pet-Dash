@@ -32,7 +32,7 @@ export function HistoricoTabela({ atendimentos }: { atendimentos: Atendimento[] 
               <td className="px-2 py-4 font-medium text-escuro">{a.servico_nome}</td>
               <td className="px-2 py-4">
                 {/* Consumo de pacote se reconhece pelo vínculo, nunca por valor zero. */}
-                <Badge variant={a.pacote !== null ? "neutro" : "pendente"}>
+                <Badge variant="neutro">
                   {a.pacote !== null ? "Pacote" : "Avulso"}
                 </Badge>
               </td>

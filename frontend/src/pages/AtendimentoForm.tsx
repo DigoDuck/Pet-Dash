@@ -269,7 +269,7 @@ export function AtendimentoForm() {
         )}
         {editando && pacoteVinculado != null && (
           <p className="text-sm text-neutro">
-            Consumo de pacote. O banho já foi pago na venda; o vínculo não muda ao editar.
+            Este banho saiu do pacote e já foi pago na venda. Isso não muda ao editar.
           </p>
         )}
 
@@ -315,10 +315,13 @@ export function AtendimentoForm() {
           <Input label="Valor do transporte" inputMode="decimal" {...register("transporte_valor")} />
         )}
 
-        <Select label="Status" {...register("status")}>
-          <option value="Pendente">Pendente</option>
-          <option value="Liberado">Liberado</option>
-          <option value="Cancelado">Cancelado</option>
+        {/* "Situação" e não "Status", e cada opção diz o que faz com o crédito: é o
+            núcleo do dinheiro (invariante 4) e antes a tela não dizia. Os `value` são
+            os da API. */}
+        <Select label="Situação" {...register("status")}>
+          <option value="Pendente">Pendente (agendado, segura o crédito do pacote)</option>
+          <option value="Liberado">Liberado (banho feito)</option>
+          <option value="Cancelado">Cancelado (não vai acontecer, devolve o crédito)</option>
         </Select>
 
         {/* No pacote, o banho já foi pago na venda — mas a corrida não, e ela é

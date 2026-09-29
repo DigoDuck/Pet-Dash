@@ -116,9 +116,9 @@ describe("login", () => {
 describe("mensagemDeErro", () => {
   it("extrai a mensagem de non_field_errors do DRF", () => {
     const erro = new ApiError(400, {
-      non_field_errors: ["Já existe um pacote para este pet nesta competência."],
+      non_field_errors: ["Já existe um pacote para este pet neste mês."],
     });
-    expect(mensagemDeErro(erro)).toBe("Já existe um pacote para este pet nesta competência.");
+    expect(mensagemDeErro(erro)).toBe("Já existe um pacote para este pet neste mês.");
   });
 
   it("extrai a mensagem de um erro de campo", () => {

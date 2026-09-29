@@ -65,7 +65,7 @@ export function Pacotes() {
       </div>
 
       <div className="mt-6 flex flex-wrap items-end gap-4">
-        {/* Rótulo "Mês", não "Competência": o campo do modal já usa esse nome, e
+        {/* Rótulo "Mês", não "Mês do pacote": o campo do modal já usa esse nome, e
             dois rótulos iguais na tela deixariam o leitor de tela ambíguo. */}
         <SeletorMes
           valor={mes}
@@ -95,7 +95,7 @@ export function Pacotes() {
             descricao={
               busca
                 ? "Tente outro nome de pet ou tutor."
-                : "Venda o primeiro Pacote Fidelidade da competência."
+                : "Venda o primeiro Pacote Fidelidade deste mês."
             }
             acao={
               busca ? undefined : <Button onClick={() => setVendendo(true)}>Vender pacote</Button>

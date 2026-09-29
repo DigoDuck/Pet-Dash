@@ -12,7 +12,12 @@ interface PagamentosFieldProps {
   valorDevido: number;
 }
 
-const METODOS = ["Pix", "Cartao", "Dinheiro"] as const;
+// O valor é a chave da API ("Cartao"); o rótulo é o que ela lê.
+const METODOS = [
+  { valor: "Pix", rotulo: "Pix" },
+  { valor: "Cartao", rotulo: "Cartão" },
+  { valor: "Dinheiro", rotulo: "Dinheiro" },
+] as const;
 
 export function PagamentosField({ control, register, watch, valorDevido }: PagamentosFieldProps) {
   const { fields, append, remove } = useFieldArray({ control, name: "pagamentos" });
@@ -41,8 +46,8 @@ export function PagamentosField({ control, register, watch, valorDevido }: Pagam
       {fields.map((field, i) => (
         <div key={field.id} className="flex flex-wrap items-end gap-2">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={`pag-metodo-${i}`} className="text-xs font-medium text-neutro">
-              Método
+            <label htmlFor={`pag-metodo-${i}`} className="text-sm font-medium text-escuro">
+              Forma de pagamento
             </label>
             <select
               id={`pag-metodo-${i}`}
@@ -50,14 +55,14 @@ export function PagamentosField({ control, register, watch, valorDevido }: Pagam
               {...register(`pagamentos.${i}.metodo`)}
             >
               {METODOS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
+                <option key={m.valor} value={m.valor}>
+                  {m.rotulo}
                 </option>
               ))}
             </select>
           </div>
           <div className="flex flex-1 flex-col gap-1.5">
-            <label htmlFor={`pag-valor-${i}`} className="text-xs font-medium text-neutro">
+            <label htmlFor={`pag-valor-${i}`} className="text-sm font-medium text-escuro">
               Valor
             </label>
             <input

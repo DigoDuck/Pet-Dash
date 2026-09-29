@@ -75,7 +75,7 @@ describe("PacoteForm", () => {
   it("mudar a competência recalcula a validade para o último dia do mês", async () => {
     renderizar(<PacoteForm aoSalvar={vi.fn()} enviando={false} aoCancelar={vi.fn()} />);
 
-    const mes = await screen.findByLabelText("Competência");
+    const mes = await screen.findByLabelText("Mês do pacote");
     expect(screen.getByLabelText("Validade")).toHaveValue("2026-07-31");
 
     await userEvent.clear(mes);
@@ -137,7 +137,7 @@ describe("PacoteForm", () => {
     // 180.00 é o preço realmente cobrado (invariante 7). O catálogo diz 220.00
     // e não pode vencer.
     expect(await screen.findByLabelText("Valor pago")).toHaveValue("180.00");
-    expect(screen.getByLabelText("Competência")).toBeDisabled();
+    expect(screen.getByLabelText("Mês do pacote")).toBeDisabled();
   });
 
   it("exibe a mensagem de erro vinda da API", async () => {
@@ -145,13 +145,13 @@ describe("PacoteForm", () => {
       <PacoteForm
         aoSalvar={vi.fn()}
         enviando={false}
-        erro="Já existe um pacote para este pet nesta competência."
+        erro="Já existe um pacote para este pet neste mês."
         aoCancelar={vi.fn()}
       />,
     );
 
     expect(
-      await screen.findByText("Já existe um pacote para este pet nesta competência."),
+      await screen.findByText("Já existe um pacote para este pet neste mês."),
     ).toBeInTheDocument();
   });
 });

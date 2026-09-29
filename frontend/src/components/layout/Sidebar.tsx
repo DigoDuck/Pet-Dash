@@ -30,7 +30,9 @@ const navPrincipal: ItemNav[] = [
 
 const navGestao: ItemNav[] = [
   { to: "/pacotes", label: "Pacotes", icon: Package },
-  { to: "/financeiro", label: "Financeiro", icon: Wallet },
+  // "Financeiro" ao lado de "Painel financeiro" a fazia adivinhar onde ficava cada
+  // número. Esta página só tem custos e retiradas; o nome agora diz isso.
+  { to: "/financeiro", label: "Custos e retiradas", icon: Wallet },
 ];
 
 function GrupoNav({ titulo, itens }: { titulo: string; itens: ItemNav[] }) {
@@ -47,10 +49,14 @@ function GrupoNav({ titulo, itens }: { titulo: string; itens: ItemNav[] }) {
               // Sem `end`, a rota "/" fica ativa em todas as outras (é prefixo de tudo).
               end={to === "/"}
               className={({ isActive }) =>
-                `flex items-center gap-3 border-r-2 px-6 py-2.5 text-sm transition-colors pointer-coarse:min-h-11 ${
+                // Fundo arredondado em vez da borda lateral dourada (listra lateral é
+                // enfeite, não sinal). O hover clareia para creme e não para dourado:
+                // dourado quer dizer só "você está aqui". `mx-3` + `px-3` mantêm os
+                // ícones alinhados ao `px-6` do rótulo do grupo.
+                `mx-3 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors pointer-coarse:min-h-11 ${
                   isActive
-                    ? "border-ouro bg-escuro-suave font-semibold text-ouro"
-                    : "border-transparent text-creme/75 hover:bg-escuro-suave/60 hover:text-ouro"
+                    ? "bg-escuro-suave font-semibold text-ouro"
+                    : "text-creme/75 hover:bg-escuro-suave/60 hover:text-creme"
                 }`
               }
             >

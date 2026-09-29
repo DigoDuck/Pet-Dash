@@ -20,13 +20,13 @@ describe("PagamentosField", () => {
   it("adiciona e remove linhas de pagamento", async () => {
     render(<Host devido={120} />);
 
-    expect(screen.getAllByLabelText("Método")).toHaveLength(1);
+    expect(screen.getAllByLabelText("Forma de pagamento")).toHaveLength(1);
 
     await userEvent.click(screen.getByRole("button", { name: "Adicionar pagamento" }));
-    expect(screen.getAllByLabelText("Método")).toHaveLength(2);
+    expect(screen.getAllByLabelText("Forma de pagamento")).toHaveLength(2);
 
     await userEvent.click(screen.getAllByRole("button", { name: "Remover" })[0]);
-    expect(screen.getAllByLabelText("Método")).toHaveLength(1);
+    expect(screen.getAllByLabelText("Forma de pagamento")).toHaveLength(1);
   });
 
   it("mostra que a soma confere", async () => {

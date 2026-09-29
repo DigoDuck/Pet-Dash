@@ -88,9 +88,9 @@ export function Servicos() {
                   {data.results.map((servico) => (
                     <tr
                       key={servico.id}
-                      className={`border-t border-neutro-light/60 transition-colors hover:bg-creme/50 ${
-                        servico.ativo ? "" : "opacity-50"
-                      }`}
+                      // Sem `opacity-50`: a linha inativa caía perto de 3:1 e o badge
+                      // "Inativo" já diz o estado em texto.
+                      className="border-t border-neutro-light/60 transition-colors hover:bg-creme/50"
                     >
                       <td className="px-6 py-4">
                         <span className="font-medium text-escuro">{servico.nome}</span>
@@ -101,7 +101,7 @@ export function Servicos() {
                         )}
                       </td>
                       <td className="px-2 py-4">
-                        <Badge variant={servico.is_pacote ? "vip" : "pendente"}>
+                        <Badge variant={servico.is_pacote ? "vip" : "neutro"}>
                           {servico.is_pacote ? `Pacote · ${servico.creditos} créditos` : "Avulso"}
                         </Badge>
                       </td>
@@ -146,7 +146,7 @@ function AlternarAtivo({ servico }: { servico: Servico }) {
     return (
       <>
         <Button
-          variant="danger"
+          variant="dangerGhost"
           disabled={atualizar.isPending}
           onClick={() => setDesativando(true)}
         >

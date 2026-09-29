@@ -140,7 +140,7 @@ describe("Pacotes", () => {
       http.get(`${BASE}/pacotes/`, () => HttpResponse.json(paginado([]))),
       http.post(`${BASE}/pacotes/`, () =>
         HttpResponse.json(
-          { non_field_errors: ["Já existe um pacote para este pet nesta competência."] },
+          { non_field_errors: ["Já existe um pacote para este pet neste mês."] },
           { status: 400 },
         ),
       ),
@@ -151,7 +151,7 @@ describe("Pacotes", () => {
     await preencherVenda();
 
     expect(
-      await screen.findByText("Já existe um pacote para este pet nesta competência."),
+      await screen.findByText("Já existe um pacote para este pet neste mês."),
     ).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });

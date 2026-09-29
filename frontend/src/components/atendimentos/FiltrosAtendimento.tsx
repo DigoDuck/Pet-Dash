@@ -18,7 +18,7 @@ export function FiltrosAtendimento({ data, status, aoMudarData, aoMudarStatus }:
         <Input label="Data" type="date" value={data} onChange={(e) => aoMudarData(e.target.value)} />
       </div>
       <div className="min-w-40 flex-1 sm:w-44 sm:flex-none">
-        <Select label="Status" value={status} onChange={(e) => aoMudarStatus(e.target.value)}>
+        <Select label="Situação" value={status} onChange={(e) => aoMudarStatus(e.target.value)}>
           <option value="">Todos</option>
           <option value="Pendente">Pendente</option>
           <option value="Liberado">Liberado</option>
