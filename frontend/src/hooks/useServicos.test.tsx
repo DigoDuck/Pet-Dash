@@ -44,4 +44,19 @@ describe("useServicos", () => {
     expect(url).not.toContain("ativo=");
     expect(url).toContain("search=Banho");
   });
+
+  it("pede a página escolhida, não sempre a primeira", async () => {
+    let url = "";
+    server.use(
+      http.get(`${BASE}/servicos/`, ({ request }) => {
+        url = request.url;
+        return HttpResponse.json({ count: 0, next: null, previous: null, results: [] });
+      }),
+    );
+
+    const { result } = renderHook(() => useServicos("", false, 2), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(url).toContain("page=2");
+  });
 });

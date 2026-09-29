@@ -1,4 +1,5 @@
 import { useFieldArray, type Control, type UseFormRegister, type UseFormWatch } from "react-hook-form";
+import { paraNumero } from "../../lib/dinheiro";
 import { formatarPreco } from "../../lib/formato";
 import type { AtendimentoEntrada } from "../../lib/types";
 import { Button } from "../ui/Button";
@@ -31,7 +32,8 @@ export function PagamentosField({
   const { fields, append, remove } = useFieldArray({ control, name: "pagamentos" });
   const pagamentos = watch("pagamentos") ?? [];
 
-  const soma = pagamentos.reduce((s, p) => s + Number(p.valor || 0), 0);
+  // `paraNumero` e não `Number`: "65,00" virava NaN e a conferência mostrava "R$ NaN".
+  const soma = pagamentos.reduce((s, p) => s + paraNumero(p.valor), 0);
   const diferenca = Number((valorDevido - soma).toFixed(2));
 
   return (
@@ -76,7 +78,7 @@ export function PagamentosField({
             <input
               id={`pag-valor-${i}`}
               inputMode="decimal"
-              placeholder="0.00"
+              placeholder="0,00"
               className="rounded-lg border border-neutro-light bg-white px-3 py-2 text-sm text-escuro pointer-coarse:min-h-11 pointer-coarse:text-base"
               {...register(`pagamentos.${i}.valor`)}
             />
