@@ -14,8 +14,10 @@ describe("HistoricoTabela", () => {
       />,
     );
 
-    expect(screen.getAllByText("Pacote")).toHaveLength(1);
-    expect(screen.getAllByText("Avulso")).toHaveLength(1);
+    // Duas vezes cada: a coluna do desktop e a linha dobrada do celular. O jsdom não
+    // aplica o CSS que esconde uma ou outra.
+    expect(screen.getAllByText("Pacote")).toHaveLength(2);
+    expect(screen.getAllByText("Avulso")).toHaveLength(2);
   });
 
   it("mostra o valor mesmo em consumo de pacote (o valor nunca é zerado)", () => {

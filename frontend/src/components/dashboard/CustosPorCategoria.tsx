@@ -23,7 +23,7 @@ export function CustosPorCategoria({ categorias }: CustosPorCategoriaProps) {
   return (
     <Card>
       <div className="flex items-start justify-between gap-2">
-        <h2 className="font-display text-xl text-escuro">Despesas por categoria</h2>
+        <h2 className="font-display text-xl text-escuro">Custos por categoria</h2>
         <span className="font-mono text-sm font-semibold text-escuro">
           {formatarPreco(total)}
         </span>

@@ -97,7 +97,7 @@ describe("Dashboard", () => {
       "href",
       "/atendimentos/novo",
     );
-    expect(screen.getByRole("link", { name: /Lançar custo/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Ver custos/ })).toHaveAttribute(
       "href",
       "/financeiro",
     );
@@ -135,7 +135,7 @@ describe("Dashboard", () => {
 
     // 8000 vs 7500 em junho = +6,7%. Nenhuma query nova: sai da série do gráfico.
     expect(await screen.findByText("+6,7%")).toBeInTheDocument();
-    expect(screen.getByText("Faturamento vs Jun")).toBeInTheDocument();
+    expect(screen.getByText("Faturamento comparado a Jun")).toBeInTheDocument();
   });
 
   // Divisão por zero: com o mês anterior zerado, (8000-0)/0 é Infinity, e "+∞%" numa
@@ -192,8 +192,8 @@ describe("Dashboard", () => {
 
     renderizar();
 
-    // Hero + 4 KPIs + transporte + 2 contadores; o crescimento vem da série, que não falhou.
-    await waitFor(() => expect(screen.getAllByText("—")).toHaveLength(8));
+    // Hero + 3 KPIs + corridas + 2 contadores; o crescimento vem da série, que não falhou.
+    await waitFor(() => expect(screen.getAllByText("—")).toHaveLength(7));
     expect(screen.queryByText("R$ 0,00")).not.toBeInTheDocument();
   });
 
@@ -237,6 +237,7 @@ describe("Dashboard", () => {
 
     expect(await screen.findByText("Nenhuma movimentação neste mês.")).toBeInTheDocument();
     expect(screen.getByText("Nenhum custo lançado neste mês.")).toBeInTheDocument();
-    expect(screen.getByText("Margem de 0,0%")).toBeInTheDocument();
+    // A margem vive no destaque ("Lucro de R$ 0,00 · margem de 0,0%"), sem card próprio.
+    expect(screen.getByText(/Lucro de/)).toHaveTextContent("margem de 0,0%");
   });
 });

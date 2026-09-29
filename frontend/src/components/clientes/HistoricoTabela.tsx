@@ -17,8 +17,8 @@ export function HistoricoTabela({ atendimentos }: { atendimentos: Atendimento[] 
           <tr className="text-left text-[10px] tracking-[0.12em] text-neutro uppercase">
             <th className="px-6 py-3 font-semibold">Data</th>
             <th className="px-2 py-3 font-semibold">Serviço</th>
-            <th className="px-2 py-3 font-semibold">Origem</th>
-            <th className="px-2 py-3 font-semibold">Status</th>
+            <th className="hidden px-2 py-3 font-semibold md:table-cell">Origem</th>
+            <th className="hidden px-2 py-3 font-semibold md:table-cell">Situação</th>
             <th className="px-6 py-3 text-right font-semibold">Valor</th>
           </tr>
         </thead>
@@ -28,15 +28,23 @@ export function HistoricoTabela({ atendimentos }: { atendimentos: Atendimento[] 
               key={a.id}
               className="border-t border-neutro-light/60 transition-colors hover:bg-creme/50"
             >
-              <td className="px-6 py-4 font-mono text-neutro">{formatarData(a.data)}</td>
-              <td className="px-2 py-4 font-medium text-escuro">{a.servico_nome}</td>
+              <td className="px-6 py-4 font-mono text-escuro">{formatarData(a.data)}</td>
+              {/* Abaixo de `md`, origem e status se dobram sob o serviço: com cinco
+                  colunas, o Valor ficava fora da tela no celular. */}
               <td className="px-2 py-4">
+                <span className="font-medium text-escuro">{a.servico_nome}</span>
+                <span className="mt-1.5 flex flex-wrap gap-1.5 md:hidden">
+                  <Badge variant={VARIANTE_STATUS[a.status]}>{a.status}</Badge>
+                  <Badge variant="neutro">{a.pacote !== null ? "Pacote" : "Avulso"}</Badge>
+                </span>
+              </td>
+              <td className="hidden px-2 py-4 md:table-cell">
                 {/* Consumo de pacote se reconhece pelo vínculo, nunca por valor zero. */}
                 <Badge variant="neutro">
                   {a.pacote !== null ? "Pacote" : "Avulso"}
                 </Badge>
               </td>
-              <td className="px-2 py-4">
+              <td className="hidden px-2 py-4 md:table-cell">
                 <Badge variant={VARIANTE_STATUS[a.status]}>{a.status}</Badge>
               </td>
               <td className="px-6 py-4 text-right font-mono font-semibold text-escuro">

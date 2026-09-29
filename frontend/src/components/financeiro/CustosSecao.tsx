@@ -86,8 +86,8 @@ export function CustosSecao({ mes }: { mes: string }) {
                 <thead>
                   <tr className="text-left text-[10px] tracking-[0.12em] text-neutro uppercase">
                     <th className="px-6 py-3 font-semibold">Descrição</th>
-                    <th className="px-2 py-3 font-semibold">Tipo</th>
-                    <th className="px-2 py-3 font-semibold">Categoria</th>
+                    <th className="hidden px-2 py-3 font-semibold md:table-cell">Tipo</th>
+                    <th className="hidden px-2 py-3 font-semibold md:table-cell">Categoria</th>
                     <th className="px-2 py-3 font-semibold text-right">Valor</th>
                     <th className="px-6 py-3 font-semibold text-right">Ações</th>
                   </tr>
@@ -98,18 +98,28 @@ export function CustosSecao({ mes }: { mes: string }) {
                       key={custo.id}
                       className="border-t border-neutro-light/60 transition-colors hover:bg-creme/50"
                     >
-                      <td className="px-6 py-4 font-medium text-escuro">{custo.descricao}</td>
-                      <td className="px-2 py-4">
+                      {/* Abaixo de `md`, Tipo e Categoria se dobram aqui: com cinco
+                          colunas, Editar e Excluir ficavam fora da tela no celular. */}
+                      <td className="px-6 py-4">
+                        <span className="font-medium text-escuro">{custo.descricao}</span>
+                        <span className="block text-xs text-neutro md:hidden">
+                          {custo.tipo === "fixo" ? "Fixo" : "Variável"}
+                          {custo.categoria && ` · ${custo.categoria}`}
+                        </span>
+                      </td>
+                      <td className="hidden px-2 py-4 md:table-cell">
                         <Badge variant="neutro">
                           {custo.tipo === "fixo" ? "Fixo" : "Variável"}
                         </Badge>
                       </td>
-                      <td className="px-2 py-4 text-neutro">{custo.categoria || "—"}</td>
+                      <td className="hidden px-2 py-4 text-neutro md:table-cell">
+                        {custo.categoria || "—"}
+                      </td>
                       <td className="px-2 py-4 text-right font-mono font-semibold text-escuro">
                         {formatarPreco(custo.valor)}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex flex-col items-end gap-2 md:flex-row md:justify-end">
                           <Button variant="ghost" onClick={() => setEmEdicao(custo)}>
                             Editar
                           </Button>

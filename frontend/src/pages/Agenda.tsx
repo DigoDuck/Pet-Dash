@@ -66,10 +66,14 @@ function comRaias(doDia: Atendimento[]) {
   return items;
 }
 
+// Mesmo código de cor do resto do app (Badge): Liberado verde, Pendente dourado.
+// Antes a grade pintava Liberado de marsala e Pendente de creme sobre creme (1:1 de
+// fundo), o que deixava o que ainda falta fazer como o card menos visível da semana.
+// Texto sempre escuro sobre fundo claro: o VIP e o horário passam no AA em todos.
 const CORES: Record<Atendimento["status"], string> = {
-  Liberado: "bg-marsala text-creme",
-  Pendente: "bg-creme text-escuro border border-neutro-light",
-  Cancelado: "bg-neutro-light/40 text-neutro line-through",
+  Liberado: "border border-sucesso/40 bg-sucesso/10 text-escuro",
+  Pendente: "border border-ouro/60 bg-ouro-light/50 text-escuro",
+  Cancelado: "border border-dashed border-neutro-light bg-creme text-neutro line-through",
 };
 
 export function Agenda() {
@@ -121,7 +125,11 @@ export function Agenda() {
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <span className="rounded-lg border border-neutro-light bg-creme px-4 py-2 text-sm font-semibold text-escuro">
+        {/* aria-live: trocar de semana pelas setas não anunciava nada ao leitor de tela. */}
+        <span
+          aria-live="polite"
+          className="rounded-lg border border-neutro-light bg-creme px-4 py-2 text-sm font-semibold text-escuro"
+        >
           {formatarData(terca)} – {formatarData(fim)}
         </span>
         <button
@@ -154,6 +162,8 @@ export function Agenda() {
         </div>
       ) : (
         <>
+        {/* Um aviso só, acima das duas visões, em vez de "..." em cada coluna da grade. */}
+        {isPending && <p className="mt-6 text-sm text-neutro">Carregando a semana...</p>}
         {/* A grade só existe a partir de lg. Grade de tempo com 6 colunas depende de
             largura para significar alguma coisa: em 390px cada dia fica com ~48px e os
             cards viram tarja ilegível, mesmo com o scroll horizontal. Espremer não
@@ -220,8 +230,6 @@ export function Agenda() {
                   />
                 ))}
 
-                {isPending && <p className="p-2 text-xs text-neutro">...</p>}
-
                 {comRaias(atendimentos.filter((a) => a.data === dia)).map(
                   ({ a, inicio, raia, raias }) => (
                     <Link
@@ -245,11 +253,13 @@ export function Agenda() {
                           </Badge>
                         )}
                       </span>
-                      <span className="block truncate opacity-80">{a.servico_nome}</span>
-                      <span className="block font-mono opacity-75">{a.horario.slice(0, 5)}</span>
-                      {/* O card tem 56px de altura e não comporta mais uma linha, mas o
-                          status não pode existir só como cor de fundo no nome do link. */}
-                      <span className="sr-only">{a.status}</span>
+                      <span className="block truncate">{a.servico_nome}</span>
+                      {/* O card tem 56px e não comporta mais uma linha, então o status
+                          divide a do horário. Visível, e não só `sr-only`: cor sozinha
+                          não é informação. Sem `opacity`, que derrubava o contraste. */}
+                      <span className="block truncate">
+                        <span className="font-mono">{a.horario.slice(0, 5)}</span> · {a.status}
+                      </span>
                     </Link>
                   ),
                 )}
@@ -262,7 +272,6 @@ export function Agenda() {
             regiões com o mesmo conteúdo em formatos diferentes, e o leitor de tela
             precisa saber em qual está. */}
         <section aria-label="Semana em lista" className="mt-6 lg:hidden">
-          {isPending && <p className="text-sm text-neutro">Carregando...</p>}
           {dias
             .filter((dia) => doDia(dia).length > 0)
             .map((dia) => (
@@ -295,15 +304,13 @@ export function Agenda() {
                               </Badge>
                             )}
                           </span>
-                          <span className="block truncate text-xs opacity-80">{a.servico_nome}</span>
+                          <span className="block truncate text-xs">{a.servico_nome}</span>
                         </span>
-                        {/* Status como texto, não como Badge: o Badge tem fundo
-                            translúcido calibrado para superfície clara, e num card
-                            Liberado (bg-marsala) ele sumiria. Aqui a cor vem da própria
-                            linha, que já tem contraste garantido contra o fundo dela.
-                            Texto e não só cor porque cor sozinha não é informação para
-                            quem não a distingue — e ela vira o nome acessível do link. */}
-                        <span className="shrink-0 text-[10px] font-semibold tracking-[0.08em] uppercase opacity-80">
+                        {/* Status como texto na cor da própria linha, e não como Badge:
+                            a linha já é colorida pelo status, uma pílula por cima repetiria
+                            a cor. Texto e não só cor porque cor sozinha não é informação
+                            para quem não a distingue, e ele vira o nome acessível do link. */}
+                        <span className="shrink-0 text-[10px] font-semibold tracking-[0.08em] uppercase">
                           {a.status}
                         </span>
                       </Link>
@@ -317,7 +324,10 @@ export function Agenda() {
       )}
 
       {!isPending && !isError && atendimentos.length === 0 && (
-        <p className="mt-4 text-center text-sm text-neutro">Nenhum atendimento nesta semana.</p>
+        <div className="mt-4 text-center text-sm text-neutro">
+          <p>Nenhum atendimento nesta semana.</p>
+          <p>Use Novo atendimento para agendar.</p>
+        </div>
       )}
 
       {proximos.length > 0 && (
@@ -325,7 +335,12 @@ export function Agenda() {
           <div className="flex items-end justify-between gap-4">
             <div>
               <h2 className="font-display text-xl text-escuro">Próximos atendimentos</h2>
-              <p className="mt-1 text-xs text-neutro">Desta semana, de hoje em diante</p>
+              {/* Diz para que a tabela serve: no celular ela repete a lista de cima, e
+                  sem o motivo parecia duplicada. */}
+              <p className="mt-1 text-xs text-neutro">
+                Desta semana, de hoje em diante. Libere ou cancele por aqui sem abrir o
+                atendimento.
+              </p>
             </div>
             <Link
               to="/atendimentos"
