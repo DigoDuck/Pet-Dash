@@ -116,7 +116,7 @@ Estas decisões estão **fechadas** e são o núcleo do projeto. Se algo no cód
 
 ## Ferramentas de IA fora do versionamento
 
-Pastas de tooling de IA (skills/plugins/caches do Claude Code) **não sobem para o repo**. Já ignoradas no `.gitignore`: `.claude/` e `.impeccable/`. Ao adicionar outra ferramenta que crie pasta local no projeto, ignorá-la também.
+Pastas de tooling de IA (skills/plugins/caches do Claude Code) **não sobem para o repo**. Já ignoradas no `.gitignore`: `.claude/`, `.impeccable/` e `.zeuz/`. Ao adicionar outra ferramenta que crie pasta local no projeto, ignorá-la também.
 
 ## Lovable = só protótipo visual (regra permanente)
 
