@@ -88,6 +88,29 @@ class Servico(models.Model):
         return self.preco_padrao
 
 
+class PacoteContratadoQuerySet(models.QuerySet):
+    def cobrindo(self, pet_id, data):
+        """Pacotes do pet que valem na `data`, o que vence primeiro na frente.
+
+        A janela é a VALIDADE, não o mês da competência (invariante 5). Buscar pela
+        competência exata ignorava o reagendamento: o pacote de setembro com validade
+        estendida até 08/10 não era achado num banho de 05/10, que nascia avulso calado
+        (faturado em dobro, crédito pago perdido). E o inverso: validade encurtada para
+        27/09 continuava vinculando o banho de 29/09.
+
+        O começo da janela é a competência OU a compra, o que vier antes: pacote vendido
+        no fim de agosto para a cota de setembro já vale no dia da venda. Com dois pacotes
+        valendo na mesma data (setembro estendido e outubro já vendido), o que vence
+        antes vai primeiro, para o crédito pago não expirar sem uso.
+        """
+        return (
+            self.filter(pet_id=pet_id, ativo=True, validade__gte=data)
+            .filter(models.Q(competencia__lte=data) | models.Q(data_compra__lte=data))
+            .select_related("pet__tutor", "servico")
+            .order_by("validade", "competencia")
+        )
+
+
 class PacoteContratado(models.Model):
     pet = models.ForeignKey(Pet, on_delete=models.PROTECT, related_name="pacotes")
     servico = models.ForeignKey(Servico, on_delete=models.PROTECT, related_name="pacotes")
@@ -97,7 +120,9 @@ class PacoteContratado(models.Model):
     data_compra = models.DateField(default=datetime.date.today)
     validade = models.DateField()
     ativo = models.BooleanField(default=True)
-    
+
+    objects = PacoteContratadoQuerySet.as_manager()
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
