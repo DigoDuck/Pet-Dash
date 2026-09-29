@@ -19,6 +19,7 @@ import { useBuscaPets } from "../hooks/usePets";
 import { useServicos } from "../hooks/useServicos";
 import { mensagemDeErro } from "../lib/api";
 import { hojeISO } from "../lib/competencia";
+import { normalizarDecimal, paraNumero } from "../lib/dinheiro";
 import { ACRESCIMO_MANEJO, precoParaPorte, type AtendimentoEntrada, type Porte } from "../lib/types";
 
 const GRUPO = "flex min-w-0 flex-col gap-4";
@@ -120,8 +121,7 @@ export function AtendimentoForm() {
   // O que há a cobrar. O serviço só é devido no avulso (no pacote foi pago na venda);
   // a corrida é devida sempre, porque é cobrada por viagem e não sai da cota.
   const valorDevido =
-    (usaPacote ? 0 : Number(valorAtual || 0)) +
-    (transporte ? Number(transporteAtual || 0) : 0);
+    (usaPacote ? 0 : paraNumero(valorAtual)) + (transporte ? paraNumero(transporteAtual) : 0);
 
   // Avulso sempre pede pagamento; pacote só quando houve corrida a cobrar.
   const mostrarPagamentos = !usaPacote || valorDevido > 0;
@@ -175,16 +175,21 @@ export function AtendimentoForm() {
   }
 
   function enviar(dados: AtendimentoEntrada) {
+    // Os valores saem com ponto: ela digita "65,00" e o DecimalField do DRF só aceita
+    // "65.00". Converter no envio, e não recusar no campo.
     const payload: AtendimentoEntrada = {
       ...dados,
       pet: petSelecionado?.id ?? 0,
       pacote: pacoteVinculado,
+      valor: normalizarDecimal(dados.valor),
       // Desmarcar "leva e traz" precisa zerar o valor: o campo some da tela mas o
       // estado do form guarda o que já foi digitado, e o backend fatura
       // `transporte_valor` sem olhar o booleano — uma corrida que não houve entraria
       // no faturamento.
-      transporte_valor: dados.transporte ? dados.transporte_valor : "0.00",
-      pagamentos: mostrarPagamentos ? dados.pagamentos : [],
+      transporte_valor: dados.transporte ? normalizarDecimal(dados.transporte_valor) : "0.00",
+      pagamentos: mostrarPagamentos
+        ? dados.pagamentos.map((p) => ({ ...p, valor: normalizarDecimal(p.valor) }))
+        : [],
     };
     if (editando) {
       atualizar.mutate(payload, { onSuccess: () => navigate("/atendimentos") });

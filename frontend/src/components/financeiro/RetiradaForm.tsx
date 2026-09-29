@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { campoDinheiro } from "../../lib/dinheiro";
 import { hojeISO, inicioDaCompetencia, mesCorrente } from "../../lib/competencia";
 import type { Retirada, RetiradaEntrada } from "../../lib/types";
 import { Button } from "../ui/Button";
@@ -8,10 +9,7 @@ import { Input } from "../ui/Input";
 
 const schema = z.object({
   descricao: z.string().min(1, "Informe a descrição"),
-  valor: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/, "Valor inválido (ex.: 500.00)")
-    .refine((v) => Number(v) > 0, "O valor precisa ser maior que zero"),
+  valor: campoDinheiro("500,00").refine((v) => Number(v) > 0, "O valor precisa ser maior que zero"),
   data: z.string().min(1, "Informe a data"),
   tipo: z.string(),
 });
@@ -78,7 +76,7 @@ export function RetiradaForm({
         <Input
           label="Valor"
           inputMode="decimal"
-          placeholder="500.00"
+          placeholder="500,00"
           error={formState.errors.valor?.message}
           {...register("valor")}
         />

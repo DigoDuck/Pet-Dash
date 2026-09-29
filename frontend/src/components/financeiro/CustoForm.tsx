@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { campoDinheiro } from "../../lib/dinheiro";
 import { inicioDaCompetencia, mesDaCompetencia } from "../../lib/competencia";
 import type { Custo, CustoEntrada } from "../../lib/types";
 import { Button } from "../ui/Button";
@@ -12,10 +13,7 @@ const schema = z.object({
   tipo: z.enum(["fixo", "variavel"]),
   // O valor viaja como string do form ao DRF (DecimalField). Number() só aqui,
   // para checar o sinal: um custo de R$ 0 é sempre erro de digitação.
-  valor: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/, "Valor inválido (ex.: 1200.00)")
-    .refine((v) => Number(v) > 0, "O valor precisa ser maior que zero"),
+  valor: campoDinheiro("1200,00").refine((v) => Number(v) > 0, "O valor precisa ser maior que zero"),
   categoria: z.string(),
   mes: z.string().min(1, "Informe o mês"),
 });
@@ -86,7 +84,7 @@ export function CustoForm({
         <Input
           label="Valor"
           inputMode="decimal"
-          placeholder="1200.00"
+          placeholder="1200,00"
           error={formState.errors.valor?.message}
           {...register("valor")}
         />
@@ -95,7 +93,7 @@ export function CustoForm({
       <div className="grid grid-cols-2 gap-4">
         <Input
           label="Categoria"
-          placeholder="Opcional: Estrutura, Insumos..."
+          placeholder="Opcional: Transporte, Insumos, Estrutura..."
           error={formState.errors.categoria?.message}
           {...register("categoria")}
         />

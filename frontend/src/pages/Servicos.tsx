@@ -30,8 +30,13 @@ export function Servicos() {
     return () => clearTimeout(id);
   }, [texto]);
 
-  const { data, isPending, isError, refetch } = useServicos(busca, incluirInativos);
+  const { data, isPending, isError, refetch } = useServicos(busca, incluirInativos, pagina);
   const criar = useCriarServico();
+
+  function fecharCriacao() {
+    setCriando(false);
+    criar.reset(); // senão o erro da tentativa anterior reaparece no próximo modal
+  }
 
   return (
     <div>
@@ -130,11 +135,12 @@ export function Servicos() {
         )}
       </div>
 
-      <Modal aberto={criando} titulo="Novo serviço" aoFechar={() => setCriando(false)}>
+      <Modal aberto={criando} titulo="Novo serviço" aoFechar={fecharCriacao}>
         <ServicoForm
           enviando={criar.isPending}
-          aoCancelar={() => setCriando(false)}
-          aoSalvar={(dados) => criar.mutate(dados, { onSuccess: () => setCriando(false) })}
+          erro={criar.isError ? mensagemDeErro(criar.error) : undefined}
+          aoCancelar={fecharCriacao}
+          aoSalvar={(dados) => criar.mutate(dados, { onSuccess: fecharCriacao })}
         />
       </Modal>
 
@@ -197,6 +203,7 @@ function ModalEdicao({ servico, aoFechar }: { servico: Servico; aoFechar: () => 
           creditos: servico.creditos,
         }}
         enviando={atualizar.isPending}
+        erro={atualizar.isError ? mensagemDeErro(atualizar.error) : undefined}
         aoCancelar={aoFechar}
         aoSalvar={(dados) => atualizar.mutate(dados, { onSuccess: aoFechar })}
       />

@@ -1,22 +1,21 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { campoDinheiro, campoDinheiroOpcional } from "../../lib/dinheiro";
 import type { ServicoEntrada } from "../../lib/types";
 import { Button } from "../ui/Button";
 import { Checkbox } from "../ui/Checkbox";
 import { Input } from "../ui/Input";
 
-const PRECO = /^\d+(\.\d{1,2})?$/;
-
 const schema = z
   .object({
     nome: z.string().min(1, "Informe o nome"),
-    preco_padrao: z.string().regex(PRECO, "Preço inválido (ex.: 65.00)"),
+    preco_padrao: campoDinheiro("65,00"),
     // Médio e grande são opcionais: a tabela da Patricia não tem preço de grande para
     // a maioria dos serviços. Vazio cai no preço do pequeno, e é melhor sugerir baixo
     // do que inventar um número.
-    preco_m: z.string().regex(PRECO, "Preço inválido (ex.: 120.00)").or(z.literal("")),
-    preco_g: z.string().regex(PRECO, "Preço inválido (ex.: 150.00)").or(z.literal("")),
+    preco_m: campoDinheiroOpcional("120,00"),
+    preco_g: campoDinheiroOpcional("150,00"),
     is_pacote: z.boolean(),
     // String no form; convertida/validada no superRefine.
     creditos: z.string(),
@@ -40,10 +39,13 @@ interface ServicoFormProps {
   inicial?: ServicoEntrada;
   aoSalvar: (dados: ServicoEntrada) => void;
   enviando: boolean;
+  /** Erro do backend. Sem ele, um 400 ou a internet caída faziam o Salvar voltar ao
+   *  normal sem nenhuma mensagem: o serviço não salvava e nada dizia isso. */
+  erro?: string;
   aoCancelar: () => void;
 }
 
-export function ServicoForm({ inicial, aoSalvar, enviando, aoCancelar }: ServicoFormProps) {
+export function ServicoForm({ inicial, aoSalvar, enviando, erro, aoCancelar }: ServicoFormProps) {
   const { register, handleSubmit, watch, formState } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -72,6 +74,11 @@ export function ServicoForm({ inicial, aoSalvar, enviando, aoCancelar }: Servico
 
   return (
     <form onSubmit={handleSubmit(enviar)} className="flex flex-col gap-4" noValidate>
+      {erro && (
+        <p role="alert" className="rounded-lg bg-erro/10 px-3 py-2 text-sm text-erro">
+          {erro}
+        </p>
+      )}
       <Input label="Nome" error={formState.errors.nome?.message} {...register("nome")} />
 
       {/* Três preços porque a Patricia cobra por faixa de peso. Médio e grande em
@@ -80,7 +87,7 @@ export function ServicoForm({ inicial, aoSalvar, enviando, aoCancelar }: Servico
       <Input
         label="Preço · pequeno (até 10 kg)"
         inputMode="decimal"
-        placeholder="65.00"
+        placeholder="65,00"
         error={formState.errors.preco_padrao?.message}
         {...register("preco_padrao")}
       />

@@ -231,6 +231,38 @@ describe("AtendimentoForm", () => {
     expect(enviado!.pagamentos).toHaveLength(1);
   });
 
+  // Teclado brasileiro: "140,00" chegava cru ao DecimalField e voltava 400, e a soma dos
+  // pagamentos virava "R$ NaN" na tela.
+  it("valores com vírgula conferem na tela e saem com ponto", async () => {
+    let enviado: Record<string, unknown> | null = null;
+    server.use(
+      servicosOk(),
+      petsOk("P"),
+      http.get(`${BASE}/atendimentos/42/`, () => HttpResponse.json(atendimentoExistente())),
+      http.get(`${BASE}/pets/7/pacote-ativo/`, () => new HttpResponse(null, { status: 204 })),
+      http.patch(`${BASE}/atendimentos/42/`, async ({ request }) => {
+        enviado = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: 42 });
+      }),
+    );
+
+    renderizarEdicao();
+    await screen.findByDisplayValue("2026-06-25");
+
+    await userEvent.clear(screen.getByLabelText("Valor do serviço"));
+    await userEvent.type(screen.getByLabelText("Valor do serviço"), "140,00");
+    await userEvent.clear(screen.getByLabelText("Valor"));
+    await userEvent.type(screen.getByLabelText("Valor"), "140,00");
+
+    expect(screen.getByText("Soma confere")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => expect(enviado).not.toBeNull());
+    expect(enviado!.valor).toBe("140.00");
+    expect(enviado!.pagamentos).toEqual([{ metodo: "Pix", valor: "140.00" }]);
+  });
+
   it("pet com pacote vincula e esconde os pagamentos", async () => {
     server.use(
       servicosOk(),

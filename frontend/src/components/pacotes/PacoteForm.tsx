@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+import { campoDinheiro } from "../../lib/dinheiro";
 import { useBuscaPets } from "../../hooks/usePets";
 import { useServicosPacote } from "../../hooks/useServicos";
 import {
@@ -24,7 +25,7 @@ const schema = z.object({
   qtd_total: z
     .string()
     .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1, "Mínimo de 1 crédito"),
-  valor_pago: z.string().regex(/^\d+(\.\d{1,2})?$/, "Valor inválido (ex.: 220.00)"),
+  valor_pago: campoDinheiro("220,00"),
   data_compra: z.string().min(1, "Informe a data da compra"),
   validade: z.string().min(1, "Informe a validade"),
 });
@@ -191,7 +192,7 @@ export function PacoteForm({ inicial, aoSalvar, enviando, erro, aoCancelar }: Pa
         <Input
           label="Valor pago"
           inputMode="decimal"
-          placeholder="220.00"
+          placeholder="220,00"
           error={formState.errors.valor_pago?.message}
           {...register("valor_pago")}
         />

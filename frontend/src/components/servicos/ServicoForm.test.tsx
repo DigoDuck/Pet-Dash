@@ -33,6 +33,34 @@ describe("ServicoForm", () => {
     });
   });
 
+  // Teclado brasileiro: "65,00" dava "Preço inválido" e ela tinha que adivinhar o ponto.
+  it("aceita vírgula e envia com ponto", async () => {
+    const aoSalvar = vi.fn();
+    render(<ServicoForm aoSalvar={aoSalvar} enviando={false} aoCancelar={() => {}} />);
+
+    await userEvent.type(screen.getByLabelText("Nome"), "Banho");
+    await userEvent.type(screen.getByLabelText("Preço · pequeno (até 10 kg)"), "65,00");
+    await userEvent.type(screen.getByLabelText("Preço · médio (10 a 15 kg)"), "1.120,50");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(aoSalvar).toHaveBeenCalledWith(
+      expect.objectContaining({ preco_padrao: "65.00", preco_m: "1120.50" }),
+    );
+  });
+
+  it("mostra o erro do backend em vez de falhar calado", () => {
+    render(
+      <ServicoForm
+        aoSalvar={vi.fn()}
+        enviando={false}
+        erro="Sem conexão com o servidor."
+        aoCancelar={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Sem conexão com o servidor.");
+  });
+
   it("envia os três preços quando as faixas são preenchidas", async () => {
     const aoSalvar = vi.fn();
     render(<ServicoForm aoSalvar={aoSalvar} enviando={false} aoCancelar={() => {}} />);

@@ -4,17 +4,20 @@ import type { Paginated, Servico, ServicoEntrada } from "../lib/types";
 
 export const chavesServicos = {
   raiz: ["servicos"] as const,
-  lista: (busca: string, incluirInativos: boolean) =>
-    ["servicos", "lista", busca, incluirInativos] as const,
+  lista: (busca: string, incluirInativos: boolean, pagina: number) =>
+    ["servicos", "lista", busca, incluirInativos, pagina] as const,
 };
 
-export function useServicos(busca: string, incluirInativos: boolean) {
-  const params = new URLSearchParams();
+/** A página não era repassada: a tela desenhava a Paginacao, mas "Próxima" pedia sempre
+ *  a primeira página e nada mudava. `pagina` padrão 1 mantém o select do atendimento
+ *  como estava (o catálogo cabe numa página de 50). */
+export function useServicos(busca: string, incluirInativos: boolean, pagina = 1) {
+  const params = new URLSearchParams({ page: String(pagina) });
   if (busca) params.set("search", busca);
   // Sem o toggle, a lista mostra só ativos. Ligado, omite o filtro (vêm todos).
   if (!incluirInativos) params.set("ativo", "true");
   return useQuery({
-    queryKey: chavesServicos.lista(busca, incluirInativos),
+    queryKey: chavesServicos.lista(busca, incluirInativos, pagina),
     queryFn: () => request<Paginated<Servico>>(`/servicos/?${params}`),
     placeholderData: keepPreviousData,
   });
