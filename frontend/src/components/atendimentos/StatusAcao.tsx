@@ -40,10 +40,24 @@ export function StatusAcao({ atendimento }: { atendimento: Atendimento }) {
       <Button
         variant="dangerGhost"
         disabled={atualizar.isPending}
-        onClick={() => setConfirmando(true)}
+        onClick={() => {
+          // Sem o reset, o erro de um Liberar que falhou aparecia dentro deste diálogo,
+          // como se fosse do cancelamento.
+          atualizar.reset();
+          setConfirmando(true);
+        }}
       >
         Cancelar
       </Button>
+
+      {/* O Liberar não tem diálogo, então o erro dele fica na própria linha. Antes ele
+          falhava calado: com o 4G do balcão caindo, o botão voltava e ela achava que
+          tinha liberado. */}
+      {atualizar.isError && !confirmando && (
+        <p role="alert" className="text-xs text-erro">
+          Não liberou. Confira a internet e tente de novo.
+        </p>
+      )}
 
       {/* Só o cancelamento confirma: liberar é reversível, cancelar mexe no saldo
           do pacote (invariante 4). */}

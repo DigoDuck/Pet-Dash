@@ -32,6 +32,69 @@ def test_pacote_duplicado_no_mes_da_400(api):
     assert resp.status_code == 400
 
 
+def test_pacote_duplicado_explica_em_portugues_do_balcao(api):
+    """O formulário sempre manda o dia 1. Nesse caso o validador automático do DRF para
+    o UNIQUE rodava antes do nosso e respondia "Os campos pet, competencia devem criar
+    um set único." — nomes de coluna na tela da Patricia."""
+    from tests.factories import PacoteContratadoFactory, PetFactory
+
+    pet = PetFactory(nome="Luna")
+    pacote = PacoteContratadoFactory(
+        pet=pet, competencia=date(2026, 9, 1), data_compra=date(2026, 9, 2),
+        validade=date(2026, 9, 30),
+    )
+    payload = {
+        "pet": pet.id, "servico": pacote.servico.id, "competencia": "2026-09-01",
+        "qtd_total": 4, "valor_pago": "350.00", "data_compra": "2026-09-03",
+        "validade": "2026-09-30",
+    }
+
+    resp = api.post("/api/pacotes/", payload, format="json")
+
+    assert resp.status_code == 400
+    assert resp.data["non_field_errors"] == [
+        "Luna já tem pacote em setembro. Edite o existente em vez de vender outro."
+    ]
+
+
+def test_venda_sem_competencia_da_400_e_nao_500(api):
+    """Sem o validador automático do UNIQUE, o DRF também parou de dar default à
+    competência: o POST sem ela pulava a checagem e estourava IntegrityError."""
+    from tests.factories import PetFactory, ServicoFactory
+
+    payload = {
+        "pet": PetFactory().id, "servico": ServicoFactory(is_pacote=True, creditos=4).id,
+        "qtd_total": 4, "valor_pago": "350.00", "data_compra": "2026-09-02",
+        "validade": "2026-09-30",
+    }
+
+    resp = api.post("/api/pacotes/", payload, format="json")
+
+    assert resp.status_code == 400
+    assert "competencia" in resp.data
+
+
+def test_patch_que_move_para_mes_ocupado_da_400(api):
+    from tests.factories import PacoteContratadoFactory
+
+    setembro = PacoteContratadoFactory(
+        competencia=date(2026, 9, 1), data_compra=date(2026, 9, 2), validade=date(2026, 9, 30)
+    )
+    agosto = PacoteContratadoFactory(
+        pet=setembro.pet, competencia=date(2026, 8, 1), data_compra=date(2026, 8, 2),
+        validade=date(2026, 8, 31),
+    )
+
+    resp = api.patch(
+        f"/api/pacotes/{agosto.id}/",
+        {"competencia": "2026-09-15", "validade": "2026-09-30"},
+        format="json",
+    )
+
+    assert resp.status_code == 400
+    assert "já tem pacote em setembro" in resp.data["non_field_errors"][0]
+
+
 def test_endpoint_pacote_ativo_do_pet(api):
     from tests.factories import PacoteContratadoFactory
     pacote = PacoteContratadoFactory(competencia=date(2026, 6, 1))

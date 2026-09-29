@@ -15,6 +15,19 @@ describe("TutorForm", () => {
     expect(aoSalvar).not.toHaveBeenCalled();
   });
 
+  it("mostra o erro do backend em vez de falhar calado", () => {
+    render(
+      <TutorForm
+        aoSalvar={vi.fn()}
+        enviando={false}
+        erro="Telefone: Este campo é obrigatório."
+        aoCancelar={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Telefone: Este campo é obrigatório.");
+  });
+
   it("envia os dados preenchidos", async () => {
     const aoSalvar = vi.fn();
     render(<TutorForm aoSalvar={aoSalvar} enviando={false} aoCancelar={() => {}} />);

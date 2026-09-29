@@ -336,6 +336,8 @@ describe("AtendimentoForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
     expect(await screen.findByText("Escolha o serviço")).toBeInTheDocument();
+    // O horário é obrigatório no model; o aviso fica no campo, não num erro sem nome.
+    expect(screen.getByText("Informe o horário")).toBeInTheDocument();
   });
 
   // A queixa da Patricia: sem pacote, o banho virava avulso sem nenhum aviso.

@@ -25,6 +25,12 @@ export function PetDetalhe() {
   const pet = usePet(petId);
   const historico = useAtendimentosDoPet(petId, pagina);
   const atualizar = useAtualizarPet(petId);
+
+  // O modal fica montado: sem o reset, o erro da tentativa anterior reaparecia.
+  function fecharEdicao() {
+    setEditando(false);
+    atualizar.reset();
+  }
   const desativar = useDesativarPet();
 
   if (pet.isError) return <ErroAoCarregar aoTentarDeNovo={() => pet.refetch()} />;
@@ -96,7 +102,7 @@ export function PetDetalhe() {
         )}
       </div>
 
-      <Modal aberto={editando} titulo="Editar pet" aoFechar={() => setEditando(false)}>
+      <Modal aberto={editando} titulo="Editar pet" aoFechar={fecharEdicao}>
         <PetForm
           tutorId={pet.data.tutor}
           inicial={{
@@ -108,8 +114,9 @@ export function PetDetalhe() {
             problema_pele: pet.data.problema_pele,
           }}
           enviando={atualizar.isPending}
-          aoCancelar={() => setEditando(false)}
-          aoSalvar={(dados) => atualizar.mutate(dados, { onSuccess: () => setEditando(false) })}
+          erro={atualizar.isError ? mensagemDeErro(atualizar.error) : undefined}
+          aoCancelar={fecharEdicao}
+          aoSalvar={(dados) => atualizar.mutate(dados, { onSuccess: fecharEdicao })}
         />
       </Modal>
 

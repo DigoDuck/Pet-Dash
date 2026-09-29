@@ -312,7 +312,14 @@ export function AtendimentoForm() {
 
           <div className="grid grid-cols-2 gap-4">
             <Input label="Data" type="date" {...register("data")} />
-            <Input label="Horário" type="time" {...register("horario")} />
+            {/* Obrigatório no model. Sem a checagem aqui, ela via "Este campo é
+                obrigatório." perto do Salvar sem nenhum campo marcado. */}
+            <Input
+              label="Horário"
+              type="time"
+              error={formState.errors.horario?.message}
+              {...register("horario", { required: "Informe o horário" })}
+            />
           </div>
 
           <Checkbox

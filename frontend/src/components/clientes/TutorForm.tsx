@@ -17,10 +17,13 @@ interface TutorFormProps {
   inicial?: TutorEntrada;
   aoSalvar: (dados: TutorEntrada) => void;
   enviando: boolean;
+  /** Erro do backend. Sem ele, internet caída ou um 400 faziam o Salvar voltar ao
+   *  normal sem mensagem nenhuma: o cadastro não salvava e nada dizia isso. */
+  erro?: string;
   aoCancelar: () => void;
 }
 
-export function TutorForm({ inicial, aoSalvar, enviando, aoCancelar }: TutorFormProps) {
+export function TutorForm({ inicial, aoSalvar, enviando, erro, aoCancelar }: TutorFormProps) {
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: inicial ?? { nome: "", telefone: "", email: "" },
@@ -45,6 +48,11 @@ export function TutorForm({ inicial, aoSalvar, enviando, aoCancelar }: TutorForm
         error={formState.errors.email?.message}
         {...register("email")}
       />
+      {erro && (
+        <p role="alert" className="rounded-lg bg-erro/10 px-3 py-2 text-sm text-erro">
+          {erro}
+        </p>
+      )}
       <div className="mt-2 flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={aoCancelar}>
           Cancelar
