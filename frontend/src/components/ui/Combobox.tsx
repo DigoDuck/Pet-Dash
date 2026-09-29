@@ -180,7 +180,7 @@ export function Combobox({
                       selecionar(item);
                     }}
                     onMouseEnter={() => setDestaque(i)}
-                    className={`cursor-pointer px-3 py-2 text-sm ${
+                    className={`cursor-pointer px-3 py-2 text-sm pointer-coarse:py-3 ${
                       i === destaque ? "bg-marsala/10 text-marsala" : "text-escuro"
                     }`}
                   >

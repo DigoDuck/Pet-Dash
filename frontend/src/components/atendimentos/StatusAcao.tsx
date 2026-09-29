@@ -10,7 +10,14 @@ export function StatusAcao({ atendimento }: { atendimento: Atendimento }) {
   const [confirmando, setConfirmando] = useState(false);
 
   if (atendimento.status === "Cancelado") {
-    return <span className="text-xs text-neutro">—</span>;
+    return (
+      <>
+        <span aria-hidden="true" className="text-xs text-neutro">
+          —
+        </span>
+        <span className="sr-only">Sem ações</span>
+      </>
+    );
   }
 
   return (
@@ -28,7 +35,13 @@ export function StatusAcao({ atendimento }: { atendimento: Atendimento }) {
           daquele atendimento, o objeto já está dito e o rótulo longo era o que estourava
           a coluna Ações no celular. O diálogo continua escrevendo por extenso, que é
           onde a ambiguidade com o botão de desistir realmente existia. */}
-      <Button variant="danger" disabled={atualizar.isPending} onClick={() => setConfirmando(true)}>
+      {/* Discreto na linha; o peso vermelho fica na confirmação. Sólido, era o elemento
+          mais forte da tela mais usada, ao lado do Liberar, que é a ação frequente. */}
+      <Button
+        variant="dangerGhost"
+        disabled={atualizar.isPending}
+        onClick={() => setConfirmando(true)}
+      >
         Cancelar
       </Button>
 
@@ -37,7 +50,12 @@ export function StatusAcao({ atendimento }: { atendimento: Atendimento }) {
       <Confirmacao
         aberto={confirmando}
         titulo="Cancelar atendimento"
-        mensagem="Cancelar este atendimento? O crédito volta ao pacote, se houver."
+        // O componente sabe se há pacote; "se houver" jogava a dúvida para ela.
+        mensagem={
+          atendimento.pacote !== null
+            ? "Cancelar este atendimento? O crédito volta para o pacote."
+            : "Cancelar este atendimento? Ele continua no histórico, marcado como cancelado."
+        }
         rotuloConfirmar="Cancelar atendimento"
         enviando={atualizar.isPending}
         erro={atualizar.isError ? mensagemDeErro(atualizar.error) : undefined}

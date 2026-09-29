@@ -72,14 +72,14 @@ export function AtendimentoTabela({ atendimentos }: { atendimentos: Atendimento[
                           {formatarData(a.data)} · {a.horario.slice(0, 5)}
                         </span>
                         <Badge variant={VARIANTE_STATUS[a.status]}>{a.status}</Badge>
-                        <Badge variant={a.pacote !== null ? "neutro" : "pendente"}>{origem}</Badge>
+                        <Badge variant="neutro">{origem}</Badge>
                       </div>
                     </div>
                   </div>
                 </td>
                 <td className="hidden px-2 py-4 text-escuro md:table-cell">{a.servico_nome}</td>
                 <td className="hidden px-2 py-4 md:table-cell">
-                  <Badge variant={a.pacote !== null ? "neutro" : "pendente"}>{origem}</Badge>
+                  <Badge variant="neutro">{origem}</Badge>
                 </td>
                 <td className="hidden px-2 py-4 md:table-cell">
                   <Badge variant={VARIANTE_STATUS[a.status]}>{a.status}</Badge>
@@ -89,7 +89,10 @@ export function AtendimentoTabela({ atendimentos }: { atendimentos: Atendimento[
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col items-end gap-2 md:flex-row md:items-center md:justify-end">
-                    <Link to={`/atendimentos/${a.id}/editar`} className="text-sm font-medium text-marsala hover:underline">
+                    <Link
+                      to={`/atendimentos/${a.id}/editar`}
+                      className="inline-flex items-center text-sm font-medium text-marsala hover:underline pointer-coarse:min-h-11"
+                    >
                       Editar
                     </Link>
                     <StatusAcao atendimento={a} />

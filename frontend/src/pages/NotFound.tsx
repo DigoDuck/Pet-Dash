@@ -4,8 +4,9 @@ export function NotFound() {
   return (
     <div className="flex flex-col items-start gap-4">
       <h1 className="font-display text-3xl text-escuro">Página não encontrada</h1>
+      <p className="text-sm text-escuro-suave">Esse endereço não existe mais.</p>
       <Link to="/" className="text-sm text-marsala underline">
-        Voltar ao Dashboard
+        Voltar ao Painel
       </Link>
     </div>
   );

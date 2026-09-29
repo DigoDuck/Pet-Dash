@@ -75,7 +75,7 @@ export function CustosSecao({ mes }: { mes: string }) {
             descricao={
               tipo
                 ? "Troque o filtro ou lance um novo custo."
-                : "Lance o aluguel, a energia e os insumos da competência."
+                : "Lance o aluguel, a energia e os insumos deste mês."
             }
             acao={<Button onClick={() => setCriando(true)}>Novo custo</Button>}
           />
@@ -100,7 +100,7 @@ export function CustosSecao({ mes }: { mes: string }) {
                     >
                       <td className="px-6 py-4 font-medium text-escuro">{custo.descricao}</td>
                       <td className="px-2 py-4">
-                        <Badge variant={custo.tipo === "fixo" ? "pendente" : "neutro"}>
+                        <Badge variant="neutro">
                           {custo.tipo === "fixo" ? "Fixo" : "Variável"}
                         </Badge>
                       </td>

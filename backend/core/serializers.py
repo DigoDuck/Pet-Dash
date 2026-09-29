@@ -134,7 +134,7 @@ class PacoteContratadoSerializer(serializers.ModelSerializer):
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
                 raise serializers.ValidationError(
-                    "Já existe um pacote para este pet nesta competência."
+                    "Já existe um pacote para este pet neste mês."
                 )
         return attrs
 

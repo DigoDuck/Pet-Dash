@@ -20,7 +20,7 @@ describe("Sidebar", () => {
       "Clientes & Pets",
       "Serviços",
       "Pacotes",
-      "Financeiro",
+      "Custos e retiradas",
     ]) {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     }

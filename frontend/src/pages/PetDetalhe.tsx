@@ -40,12 +40,12 @@ export function PetDetalhe() {
 
   return (
     <div>
-      <nav className="text-xs text-neutro">
-        <Link to="/clientes" className="hover:text-marsala">
+      <nav aria-label="Caminho" className="text-sm text-neutro">
+        <Link to="/clientes" className="inline-flex items-center hover:text-marsala pointer-coarse:min-h-11">
           Clientes
         </Link>{" "}
         /{" "}
-        <Link to={`/clientes/${pet.data.tutor}`} className="hover:text-marsala">
+        <Link to={`/clientes/${pet.data.tutor}`} className="inline-flex items-center hover:text-marsala pointer-coarse:min-h-11">
           {pet.data.tutor_nome}
         </Link>{" "}
         / {pet.data.nome}
@@ -67,7 +67,7 @@ export function PetDetalhe() {
             Editar
           </Button>
           <Button
-            variant="danger"
+            variant="dangerGhost"
             onClick={() => setDesativando(true)}
             disabled={desativar.isPending}
           >

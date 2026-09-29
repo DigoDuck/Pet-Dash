@@ -9,9 +9,9 @@ interface AlertasDoPetProps {
  *  do formulário. */
 export function AlertasDoPet({ agressivo, otite, problemaPele }: AlertasDoPetProps) {
   const alertas = [
-    agressivo && "Este pet foi cadastrado como agressivo — manejo especial já marcado (+40%).",
-    otite && "Este pet tem otite — cuidado com o ouvido no banho.",
-    problemaPele && "Este pet tem problema de pele — atenção ao produto do banho.",
+    agressivo && "Este pet foi cadastrado como agressivo: manejo especial já marcado (+40%).",
+    otite && "Este pet tem otite: cuidado com o ouvido no banho.",
+    problemaPele && "Este pet tem problema de pele: atenção ao produto do banho.",
   ].filter((a): a is string => typeof a === "string");
 
   if (alertas.length === 0) return null;
@@ -19,7 +19,7 @@ export function AlertasDoPet({ agressivo, otite, problemaPele }: AlertasDoPetPro
   return (
     <div className="rounded-lg border border-erro/30 bg-erro/5 p-4">
       <p className="text-sm font-medium text-escuro">Alertas deste pet</p>
-      <ul className="mt-1 list-disc pl-5 text-sm text-neutro">
+      <ul className="mt-1 list-disc pl-5 text-sm text-escuro-suave">
         {alertas.map((alerta) => (
           <li key={alerta}>{alerta}</li>
         ))}

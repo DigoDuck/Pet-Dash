@@ -7,7 +7,7 @@ interface ErroAoCarregarProps {
 }
 
 export function ErroAoCarregar({
-  mensagem = "Não foi possível carregar os dados.",
+  mensagem = "Não foi possível carregar. Confira a internet e tente de novo.",
   aoTentarDeNovo,
 }: ErroAoCarregarProps) {
   return (

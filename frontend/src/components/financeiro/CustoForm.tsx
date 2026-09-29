@@ -17,7 +17,7 @@ const schema = z.object({
     .regex(/^\d+(\.\d{1,2})?$/, "Valor inválido (ex.: 1200.00)")
     .refine((v) => Number(v) > 0, "O valor precisa ser maior que zero"),
   categoria: z.string(),
-  mes: z.string().min(1, "Informe a competência"),
+  mes: z.string().min(1, "Informe o mês"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -100,7 +100,7 @@ export function CustoForm({
           {...register("categoria")}
         />
         <Input
-          label="Competência"
+          label="Mês do custo"
           type="month"
           error={formState.errors.mes?.message}
           {...register("mes")}

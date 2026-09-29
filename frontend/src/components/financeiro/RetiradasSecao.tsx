@@ -53,7 +53,7 @@ export function RetiradasSecao({ mes }: { mes: string }) {
         ) : data.count === 0 ? (
           <EstadoVazio
             titulo="Nenhuma retirada neste mês"
-            descricao="Registre o pró-labore e as retiradas de lucro da competência."
+            descricao="Registre o pró-labore e as retiradas de lucro deste mês."
             acao={<Button onClick={() => setCriando(true)}>Nova retirada</Button>}
           />
         ) : (

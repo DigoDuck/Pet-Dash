@@ -10,7 +10,10 @@ export function Checkbox({ label, error, id, className = "", ...props }: Checkbo
   const inputId = id ?? props.name ?? gerado;
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={inputId} className="flex items-center gap-2 text-sm font-medium text-escuro">
+      <label
+        htmlFor={inputId}
+        className="flex items-center gap-2 text-sm font-medium text-escuro pointer-coarse:min-h-11"
+      >
         <input
           id={inputId}
           type="checkbox"

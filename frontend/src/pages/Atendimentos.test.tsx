@@ -37,7 +37,7 @@ describe("Atendimentos", () => {
     renderizarComProvedores(<Atendimentos />, { rota: "/atendimentos", caminho: "/atendimentos" });
     await screen.findByText("Luna");
 
-    await userEvent.selectOptions(screen.getByLabelText("Status"), "Liberado");
+    await userEvent.selectOptions(screen.getByLabelText("Situação"), "Liberado");
 
     await waitFor(() => expect(statuses).toContain("Liberado"));
   });

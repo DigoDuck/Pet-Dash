@@ -69,7 +69,7 @@ describe("CustoForm", () => {
 
     // A competência é a do custo (junho), não a do mês aberto na página (julho):
     // editar o custo de junho não pode reescrevê-lo para outro mês.
-    expect(screen.getByLabelText("Competência")).toHaveValue("2026-06");
+    expect(screen.getByLabelText("Mês do custo")).toHaveValue("2026-06");
     expect(screen.getByLabelText("Descrição")).toHaveValue("Shampoo");
     expect(screen.getByLabelText("Valor")).toHaveValue("180.00");
     expect(screen.getByLabelText("Tipo")).toHaveValue("variavel");

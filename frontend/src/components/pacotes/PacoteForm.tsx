@@ -20,7 +20,7 @@ import { Select } from "../ui/Select";
 const schema = z.object({
   pet: z.number().min(1, "Escolha um pet"),
   servico: z.string().refine((v) => Number(v) > 0, "Escolha o serviço"),
-  mes: z.string().min(1, "Informe a competência"),
+  mes: z.string().min(1, "Informe o mês"),
   qtd_total: z
     .string()
     .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1, "Mínimo de 1 crédito"),
@@ -168,7 +168,7 @@ export function PacoteForm({ inicial, aoSalvar, enviando, erro, aoCancelar }: Pa
         {/* Competência trava na edição: junto com o pet, é a chave única do
             pacote — mudá-la seria outra venda disfarçada de edição. */}
         <Input
-          label="Competência"
+          label="Mês do pacote"
           type="month"
           disabled={editando}
           error={formState.errors.mes?.message}
