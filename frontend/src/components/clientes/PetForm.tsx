@@ -24,10 +24,20 @@ interface PetFormProps {
   inicial?: Omit<PetEntrada, "tutor">;
   aoSalvar: (dados: PetEntrada) => void;
   enviando: boolean;
+  /** Erro do backend. Sem ele, internet caída ou um 400 faziam o Salvar voltar ao
+   *  normal sem mensagem nenhuma: o cadastro não salvava e nada dizia isso. */
+  erro?: string;
   aoCancelar: () => void;
 }
 
-export function PetForm({ tutorId, inicial, aoSalvar, enviando, aoCancelar }: PetFormProps) {
+export function PetForm({
+  tutorId,
+  inicial,
+  aoSalvar,
+  enviando,
+  erro,
+  aoCancelar,
+}: PetFormProps) {
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(schema),
     // Os três booleans precisam estar aqui: sem valor inicial o input nasce
@@ -60,6 +70,11 @@ export function PetForm({ tutorId, inicial, aoSalvar, enviando, aoCancelar }: Pe
       <Checkbox label="Tem otite" {...register("otite")} />
       <Checkbox label="Tem problema de pele" {...register("problema_pele")} />
 
+      {erro && (
+        <p role="alert" className="rounded-lg bg-erro/10 px-3 py-2 text-sm text-erro">
+          {erro}
+        </p>
+      )}
       <div className="mt-2 flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={aoCancelar}>
           Cancelar

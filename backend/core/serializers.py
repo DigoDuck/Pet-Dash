@@ -5,6 +5,12 @@ from rest_framework import serializers
 
 from . import models, services
 
+# Nome do mês sem depender do locale do container (o Railway roda em inglês).
+MESES = [
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+]
+
 
 class TutorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -73,6 +79,18 @@ class PacoteContratadoSerializer(serializers.ModelSerializer):
             "id", "pet", "pet_nome", "tutor_nome", "servico", "servico_nome",
             "competencia", "qtd_total", "valor_pago", "data_compra", "validade", "saldo",
         ]
+        # Sem o validador automático do UNIQUE(pet, competencia): ele roda antes do
+        # `validate` e responde "Os campos pet, competencia devem criar um set único.",
+        # nomes de coluna na tela. A mesma regra é checada no `validate`, com a data
+        # normalizada e em português; a constraint do banco continua de guarda.
+        # ponytail: duas vendas simultâneas do mesmo pet dariam IntegrityError (500);
+        # single-user, então não acontece. Capturar no create se virar multiusuário.
+        validators = []
+        # Desligar os validadores também tira o default que o DRF injetava na
+        # `competencia` por ela fazer parte do UNIQUE. Sem o campo no POST, o `validate`
+        # pulava a checagem e o banco respondia 500. Obrigatório (o formulário sempre
+        # manda) e sem `default=date.today`, que leria o relógio em UTC.
+        extra_kwargs = {"competencia": {"required": True}}
 
     def get_saldo(self, obj):
         return obj.saldo()
@@ -133,8 +151,10 @@ class PacoteContratadoSerializer(serializers.ModelSerializer):
             if self.instance:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
+                mes = MESES[competencia_normalizada.month - 1]
                 raise serializers.ValidationError(
-                    "Já existe um pacote para este pet neste mês."
+                    f"{pet.nome} já tem pacote em {mes}. "
+                    "Edite o existente em vez de vender outro."
                 )
         return attrs
 

@@ -95,6 +95,35 @@ export function logout(): void {
   clearTokens();
 }
 
+/** Rótulo de tela de cada campo da API. "Este campo é obrigatório." sozinho, perto do
+ *  botão Salvar, não dizia QUAL campo; com o rótulo na frente, diz. */
+const ROTULOS: Record<string, string> = {
+  pet: "Pet",
+  servico: "Serviço",
+  data: "Data",
+  horario: "Horário",
+  valor: "Valor",
+  transporte_valor: "Valor do transporte",
+  status: "Situação",
+  pagamentos: "Pagamentos",
+  nome: "Nome",
+  telefone: "Telefone",
+  email: "E-mail",
+  porte: "Porte",
+  competencia: "Mês",
+  validade: "Validade",
+  data_compra: "Data da compra",
+  valor_pago: "Valor pago",
+  qtd_total: "Créditos",
+  creditos: "Créditos",
+  preco_padrao: "Preço (pequeno)",
+  preco_m: "Preço (médio)",
+  preco_g: "Preço (grande)",
+  descricao: "Descrição",
+  categoria: "Categoria",
+  tipo: "Tipo",
+};
+
 /** Extrai a mensagem legível de um erro do DRF ({"non_field_errors": ["..."]}
  *  ou {"campo": ["..."]}). Sem isto, uma mutation rejeitada falharia calada. */
 export function mensagemDeErro(erro: unknown): string {
@@ -102,9 +131,17 @@ export function mensagemDeErro(erro: unknown): string {
   const detail = erro.detail;
   if (typeof detail === "string") return detail;
   if (detail && typeof detail === "object") {
-    const primeiro = Object.values(detail as Record<string, unknown>)[0];
-    if (Array.isArray(primeiro) && typeof primeiro[0] === "string") return primeiro[0];
-    if (typeof primeiro === "string") return primeiro;
+    const [campo, primeiro] = Object.entries(detail as Record<string, unknown>)[0] ?? [];
+    const texto =
+      Array.isArray(primeiro) && typeof primeiro[0] === "string"
+        ? primeiro[0]
+        : typeof primeiro === "string"
+          ? primeiro
+          : null;
+    if (texto) {
+      const rotulo = campo ? ROTULOS[campo] : undefined;
+      return rotulo ? `${rotulo}: ${texto}` : texto;
+    }
   }
   return "Não foi possível salvar. Tente de novo.";
 }

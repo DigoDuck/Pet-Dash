@@ -121,9 +121,15 @@ describe("mensagemDeErro", () => {
     expect(mensagemDeErro(erro)).toBe("Já existe um pacote para este pet neste mês.");
   });
 
-  it("extrai a mensagem de um erro de campo", () => {
+  // Sem o rótulo, "Este campo é obrigatório." perto do Salvar não dizia qual campo.
+  it("põe o rótulo do campo na frente do erro de campo", () => {
     const erro = new ApiError(400, { valor_pago: ["Informe um número válido."] });
-    expect(mensagemDeErro(erro)).toBe("Informe um número válido.");
+    expect(mensagemDeErro(erro)).toBe("Valor pago: Informe um número válido.");
+  });
+
+  it("campo sem rótulo conhecido mostra só a mensagem", () => {
+    const erro = new ApiError(400, { campo_novo: ["Algo deu errado."] });
+    expect(mensagemDeErro(erro)).toBe("Algo deu errado.");
   });
 
   it("tem fallback para erro que não é da API", () => {

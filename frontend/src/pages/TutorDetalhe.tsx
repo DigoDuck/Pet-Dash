@@ -26,6 +26,16 @@ export function TutorDetalhe() {
   const desativar = useDesativarTutor();
   const criarPet = useCriarPet();
 
+  // Os modais ficam montados: sem o reset, o erro da tentativa anterior reaparecia.
+  function fecharEdicao() {
+    setEditando(false);
+    atualizar.reset();
+  }
+  function fecharNovoPet() {
+    setNovoPet(false);
+    criarPet.reset();
+  }
+
   if (tutor.isError) return <ErroAoCarregar aoTentarDeNovo={() => tutor.refetch()} />;
   if (tutor.isPending) return <p className="text-sm text-neutro">Carregando...</p>;
 
@@ -89,7 +99,7 @@ export function TutorDetalhe() {
         )}
       </div>
 
-      <Modal aberto={editando} titulo="Editar tutor" aoFechar={() => setEditando(false)}>
+      <Modal aberto={editando} titulo="Editar tutor" aoFechar={fecharEdicao}>
         <TutorForm
           inicial={{
             nome: tutor.data.nome,
@@ -97,17 +107,19 @@ export function TutorDetalhe() {
             email: tutor.data.email,
           }}
           enviando={atualizar.isPending}
-          aoCancelar={() => setEditando(false)}
-          aoSalvar={(dados) => atualizar.mutate(dados, { onSuccess: () => setEditando(false) })}
+          erro={atualizar.isError ? mensagemDeErro(atualizar.error) : undefined}
+          aoCancelar={fecharEdicao}
+          aoSalvar={(dados) => atualizar.mutate(dados, { onSuccess: fecharEdicao })}
         />
       </Modal>
 
-      <Modal aberto={novoPet} titulo="Novo pet" aoFechar={() => setNovoPet(false)}>
+      <Modal aberto={novoPet} titulo="Novo pet" aoFechar={fecharNovoPet}>
         <PetForm
           tutorId={tutorId}
           enviando={criarPet.isPending}
-          aoCancelar={() => setNovoPet(false)}
-          aoSalvar={(dados) => criarPet.mutate(dados, { onSuccess: () => setNovoPet(false) })}
+          erro={criarPet.isError ? mensagemDeErro(criarPet.error) : undefined}
+          aoCancelar={fecharNovoPet}
+          aoSalvar={(dados) => criarPet.mutate(dados, { onSuccess: fecharNovoPet })}
         />
       </Modal>
 

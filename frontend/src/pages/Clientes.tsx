@@ -14,6 +14,7 @@ import { Paginacao } from "../components/ui/Paginacao";
 import { useDashboard } from "../hooks/useDashboard";
 import { usePets } from "../hooks/usePets";
 import { useCriarTutor, useTutores } from "../hooks/useTutores";
+import { mensagemDeErro } from "../lib/api";
 import { inicioDaCompetencia, mesCorrente, ultimoDiaDoMes } from "../lib/competencia";
 
 type Aba = "tutores" | "pets";
@@ -38,6 +39,12 @@ export function Clientes() {
   const tutores = useTutores(busca, pagina, aba === "tutores");
   const pets = usePets(busca, pagina, aba === "pets");
   const criar = useCriarTutor();
+
+  // O modal fica montado: sem o reset, o erro da tentativa anterior reaparecia.
+  function fecharNovoTutor() {
+    setModalAberto(false);
+    criar.reset();
+  }
 
   // Mesma chave que o Dashboard usa no mês corrente: a resposta vem do cache, sem
   // request novo, se a Patricia passou pelo painel antes de abrir os clientes.
@@ -150,13 +157,12 @@ export function Clientes() {
         </div>
       </section>
 
-      <Modal aberto={modalAberto} titulo="Novo tutor" aoFechar={() => setModalAberto(false)}>
+      <Modal aberto={modalAberto} titulo="Novo tutor" aoFechar={fecharNovoTutor}>
         <TutorForm
           enviando={criar.isPending}
-          aoCancelar={() => setModalAberto(false)}
-          aoSalvar={(dados) =>
-            criar.mutate(dados, { onSuccess: () => setModalAberto(false) })
-          }
+          erro={criar.isError ? mensagemDeErro(criar.error) : undefined}
+          aoCancelar={fecharNovoTutor}
+          aoSalvar={(dados) => criar.mutate(dados, { onSuccess: fecharNovoTutor })}
         />
       </Modal>
     </div>
