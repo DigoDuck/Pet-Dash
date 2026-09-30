@@ -37,6 +37,7 @@ pnpm-debug.log*
 # ==== Ferramentas de IA / Claude Code (não versionar) ====
 .claude/
 .impeccable/
+.zeuz/
 
 # ==== Material de estudo pessoal (não versionar) ====
 estudos/
