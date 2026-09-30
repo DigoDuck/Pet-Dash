@@ -387,8 +387,17 @@ export function AtendimentoForm() {
         )}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={() => navigate("/atendimentos")}>
-            Cancelar
+          {/* "Voltar" e não "Cancelar": na edição de um atendimento, "Cancelar" soava
+              como cancelar o banho, que é outra ação da tabela. E volta para onde ela
+              estava (Agenda ou lista); sem histórico no app (link direto), cai na lista. */}
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() =>
+              window.history.state?.idx > 0 ? navigate(-1) : navigate("/atendimentos")
+            }
+          >
+            Voltar
           </Button>
           {/* O rótulo diz por que o botão está parado; desabilitado e mudo, ela tocava
               de novo achando que não tinha pegado. */}

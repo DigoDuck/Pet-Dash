@@ -1,14 +1,14 @@
-import { useState } from "react";
 import { CustosSecao } from "../components/financeiro/CustosSecao";
 import { ResumoMes } from "../components/financeiro/ResumoMes";
 import { RetiradasSecao } from "../components/financeiro/RetiradasSecao";
 import { SeletorMes } from "../components/ui/SeletorMes";
-import { inicioDaCompetencia, mesCorrente, ultimoDiaDoMes } from "../lib/competencia";
+import { useMesDaUrl } from "../hooks/useMesDaUrl";
+import { inicioDaCompetencia, ultimoDiaDoMes } from "../lib/competencia";
 
 /** A página só decide o mês; cada seção cuida do próprio estado (página, modais,
  *  filtro). Sem essa divisão, ela acumularia o estado das duas tabelas. */
 export function Financeiro() {
-  const [mes, setMes] = useState(mesCorrente());
+  const [mes, setMes] = useMesDaUrl();
 
   return (
     <div>

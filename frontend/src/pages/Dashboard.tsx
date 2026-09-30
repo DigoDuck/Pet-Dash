@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { CustosPorCategoria } from "../components/dashboard/CustosPorCategoria";
 import { GraficoMensal } from "../components/dashboard/GraficoMensal";
 import { HeroFaturamento } from "../components/dashboard/HeroFaturamento";
@@ -6,6 +5,7 @@ import { TransacoesRecentes } from "../components/dashboard/TransacoesRecentes";
 import { Bloco } from "../components/ui/Bloco";
 import { KpiCard } from "../components/ui/KpiCard";
 import { SeletorMes } from "../components/ui/SeletorMes";
+import { useMesDaUrl } from "../hooks/useMesDaUrl";
 import { useDashboard, useSerieMensal, useTransacoes } from "../hooks/useDashboard";
 import {
   inicioDaCompetencia,
@@ -46,7 +46,7 @@ function taxaDeCrescimento(serie: PontoSerie[]): Crescimento | null {
 }
 
 export function Dashboard() {
-  const [mes, setMes] = useState(mesCorrente());
+  const [mes, setMes] = useMesDaUrl();
   const inicio = inicioDaCompetencia(mes);
   const fim = ultimoDiaDoMes(mes);
 
@@ -58,7 +58,13 @@ export function Dashboard() {
   const primeiroMes = mesesAnteriores(mes, MESES_NO_GRAFICO)[0];
   const serie = useSerieMensal(inicioDaCompetencia(primeiroMes), fim);
 
-  const crescimento = serie.data ? taxaDeCrescimento(serie.data) : null;
+  // No mês em andamento, comparar o parcial com o mês anterior inteiro mostrava queda
+  // quase todo dia ("-60%" no dia 10), um número falso sobre o que ela mais teme. A
+  // comparação honesta (mesmo intervalo de dias) pediria outra query; até lá, não
+  // compara mês aberto.
+  const mesEmAndamento = mes === mesCorrente();
+  const crescimento =
+    serie.data && !mesEmAndamento ? taxaDeCrescimento(serie.data) : null;
 
   return (
     <div>
@@ -157,9 +163,11 @@ export function Dashboard() {
             sub={
               crescimento
                 ? `Faturamento comparado a ${crescimento.mesAnterior}`
-                : serie.isSuccess
-                  ? "Sem mês anterior para comparar"
-                  : undefined
+                : !serie.isSuccess
+                  ? undefined
+                  : mesEmAndamento
+                    ? "Mês em andamento. Compare quando ele fechar."
+                    : "Sem mês anterior para comparar"
             }
             carregando={serie.isPending}
             erro={serie.isError}

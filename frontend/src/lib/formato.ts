@@ -1,4 +1,13 @@
-/** "1200.5" -> "R$ 1200,50". Aceita number porque somas locais (ex.: o total dos
+// Separador de milhar: "R$ 10400,00" e "R$ 1040,00" diferiam por um dígito que ela
+// precisava contar, e a planilha de onde ela vem sempre mostrou "10.400,00". Só o
+// número passa pelo Intl; o "R$ " fica à mão porque o estilo `currency` insere um
+// espaço não separável, que muda o texto e quebraria toda busca por "R$ ".
+const NUMERO_BR = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/** "1200.5" -> "R$ 1.200,50". Aceita number porque somas locais (ex.: o total dos
  *  pagamentos) já chegam calculadas; a API sempre manda DecimalField como string.
  *
  *  O que não vira número devolve traço, nunca "R$ NaN". O caso real: front e API
@@ -12,7 +21,7 @@
 export function formatarPreco(valor: string | number): string {
   const numero = Number(valor);
   if (!Number.isFinite(numero)) return "—";
-  return `R$ ${numero.toFixed(2).replace(".", ",")}`;
+  return `R$ ${NUMERO_BR.format(numero)}`;
 }
 
 /** "23194.00" -> "R$ 23,2k". Para rótulo de barra, onde "R$ 23194,00" não cabe.

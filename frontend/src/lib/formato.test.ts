@@ -3,8 +3,14 @@ import { formatarPercentual, formatarPreco, formatarPrecoCurto } from "./formato
 
 describe("formatarPreco", () => {
   it("formata o decimal em string que vem da API", () => {
-    expect(formatarPreco("1200.00")).toBe("R$ 1200,00");
+    expect(formatarPreco("1200.00")).toBe("R$ 1.200,00");
     expect(formatarPreco("60.5")).toBe("R$ 60,50");
+  });
+
+  it("separa milhar como a planilha: 10.400 não se confunde com 1.040", () => {
+    expect(formatarPreco("10400.00")).toBe("R$ 10.400,00");
+    expect(formatarPreco("1040.00")).toBe("R$ 1.040,00");
+    expect(formatarPreco(1234567.8)).toBe("R$ 1.234.567,80");
   });
 
   it("formata number, usado nas somas locais", () => {
