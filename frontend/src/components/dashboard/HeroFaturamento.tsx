@@ -78,7 +78,9 @@ export function HeroFaturamento({
           Novo atendimento
         </Link>
         <Link
-          to="/financeiro"
+          // Leva o mês junto: sem ele, revisar junho aqui e tocar em "Ver custos"
+          // abria os custos do mês corrente.
+          to={`/financeiro?mes=${mes}`}
           className="inline-flex items-center gap-2 rounded-lg border border-creme/30 px-3.5 py-2 text-sm font-semibold text-creme transition-colors hover:bg-creme/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-creme pointer-coarse:min-h-11"
         >
           <ReceiptText className="h-4 w-4" aria-hidden="true" />

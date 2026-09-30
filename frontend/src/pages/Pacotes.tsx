@@ -15,12 +15,12 @@ import {
   useExcluirPacote,
   usePacotes,
 } from "../hooks/usePacotes";
+import { useMesDaUrl } from "../hooks/useMesDaUrl";
 import { mensagemDeErro } from "../lib/api";
 import {
   formatarData,
   hojeISO,
   inicioDaCompetencia,
-  mesCorrente,
   mesDaCompetencia,
   ultimoDiaDoMes,
 } from "../lib/competencia";
@@ -28,7 +28,7 @@ import { formatarPreco } from "../lib/formato";
 import type { Pacote } from "../lib/types";
 
 export function Pacotes() {
-  const [mes, setMes] = useState(mesCorrente());
+  const [mes, setMes] = useMesDaUrl();
   const [texto, setTexto] = useState("");
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);

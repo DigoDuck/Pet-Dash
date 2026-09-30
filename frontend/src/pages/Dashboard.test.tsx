@@ -49,8 +49,8 @@ function servirTudo(serie = SERIE) {
   );
 }
 
-function renderizar() {
-  return renderizarComProvedores(<Dashboard />, { rota: "/", caminho: "/" });
+function renderizar(rota = "/") {
+  return renderizarComProvedores(<Dashboard />, { rota, caminho: "/" });
 }
 
 beforeEach(() => {
@@ -80,7 +80,7 @@ describe("Dashboard", () => {
 
     renderizar();
 
-    await screen.findByText("R$ 8000,00");
+    await screen.findByText("R$ 8.000,00");
     // Fevereiro é o primeiro dos 6 meses terminando em julho; KPIs e feed olham só julho.
     expect(urls.filter((u) => u.includes("inicio=2026-07-01&fim=2026-07-31"))).toHaveLength(2);
     expect(urls.some((u) => u.includes("inicio=2026-02-01&fim=2026-07-31"))).toBe(true);
@@ -91,15 +91,16 @@ describe("Dashboard", () => {
 
     renderizar();
 
-    expect(await screen.findByText("R$ 8000,00")).toBeInTheDocument();
-    expect(screen.getByText(/Lucro de/)).toHaveTextContent("Lucro de R$ 6500,00 · margem de 81,3%");
+    expect(await screen.findByText("R$ 8.000,00")).toBeInTheDocument();
+    expect(screen.getByText(/Lucro de/)).toHaveTextContent("Lucro de R$ 6.500,00 · margem de 81,3%");
     expect(screen.getByRole("link", { name: /Novo atendimento/ })).toHaveAttribute(
       "href",
       "/atendimentos/novo",
     );
     expect(screen.getByRole("link", { name: /Ver custos/ })).toHaveAttribute(
       "href",
-      "/financeiro",
+      // Leva o mês da tela: revisar julho aqui e abrir os custos de outro mês enganava.
+      "/financeiro?mes=2026-07",
     );
   });
 
@@ -120,8 +121,8 @@ describe("Dashboard", () => {
 
     expect(await screen.findByText("+ R$ 95,00")).toBeInTheDocument();
     expect(screen.getByText("+ R$ 220,00")).toBeInTheDocument();
-    expect(screen.getByText("− R$ 2000,00")).toBeInTheDocument();
-    expect(screen.getByText("− R$ 1200,00")).toBeInTheDocument();
+    expect(screen.getByText("− R$ 2.000,00")).toBeInTheDocument();
+    expect(screen.getByText("− R$ 1.200,00")).toBeInTheDocument();
     // Custo tem competência (dia 1 sintético), não data de pagamento: "01/07/2026" seria
     // afirmar um dia que ninguém registrou.
     expect(screen.getByText("Custo · Jul/2026")).toBeInTheDocument();
@@ -129,13 +130,26 @@ describe("Dashboard", () => {
   });
 
   it("calcula o crescimento contra o mês anterior a partir da série", async () => {
+    // Julho já fechado: comparar só faz sentido com o mês inteiro.
+    vi.setSystemTime(new Date(2026, 7, 5));
     servirTudo();
 
-    renderizar();
+    renderizar("/?mes=2026-07");
 
     // 8000 vs 7500 em junho = +6,7%. Nenhuma query nova: sai da série do gráfico.
     expect(await screen.findByText("+6,7%")).toBeInTheDocument();
     expect(screen.getByText("Faturamento comparado a Jun")).toBeInTheDocument();
+  });
+
+  // No dia 10, o mês parcial contra o anterior inteiro dava "-60%": um número falso
+  // sobre o que ela mais teme. Mês aberto não compara.
+  it("mês em andamento não compara, e diz por quê", async () => {
+    servirTudo();
+
+    renderizar();
+
+    expect(await screen.findByText("Mês em andamento. Compare quando ele fechar.")).toBeInTheDocument();
+    expect(screen.queryByText("+6,7%")).not.toBeInTheDocument();
   });
 
   // Divisão por zero: com o mês anterior zerado, (8000-0)/0 é Infinity, e "+∞%" numa
@@ -148,7 +162,7 @@ describe("Dashboard", () => {
 
     renderizar();
 
-    await screen.findByText("R$ 8000,00");
+    await screen.findByText("R$ 8.000,00");
     expect(screen.queryByText(/Infinity|NaN|∞/)).not.toBeInTheDocument();
     expect(screen.getByText("Crescimento").parentElement).toHaveTextContent("—");
   });
@@ -172,7 +186,7 @@ describe("Dashboard", () => {
     );
 
     renderizar();
-    await screen.findByText("R$ 8000,00");
+    await screen.findByText("R$ 8.000,00");
 
     fireEvent.change(screen.getByLabelText("Mês"), { target: { value: "2026-06" } });
 
@@ -192,8 +206,9 @@ describe("Dashboard", () => {
 
     renderizar();
 
-    // Hero + 3 KPIs + corridas + 2 contadores; o crescimento vem da série, que não falhou.
-    await waitFor(() => expect(screen.getAllByText("—")).toHaveLength(7));
+    // Hero + 3 KPIs + corridas + 2 contadores, mais o crescimento: julho é o mês em
+    // andamento (hoje é 13/07), e mês aberto não é comparado.
+    await waitFor(() => expect(screen.getAllByText("—")).toHaveLength(8));
     expect(screen.queryByText("R$ 0,00")).not.toBeInTheDocument();
   });
 
@@ -209,7 +224,7 @@ describe("Dashboard", () => {
     expect(
       await screen.findByText("Não foi possível carregar as movimentações."),
     ).toBeInTheDocument();
-    expect(screen.getByText("R$ 8000,00")).toBeInTheDocument();
+    expect(screen.getByText("R$ 8.000,00")).toBeInTheDocument();
     expect(screen.getByText("Fluxo de caixa")).toBeInTheDocument();
   });
 

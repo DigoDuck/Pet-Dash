@@ -97,6 +97,12 @@ export function CustoForm({
           error={formState.errors.categoria?.message}
           {...register("categoria")}
         />
+        {/* O card das corridas soma só a categoria "Transporte". Escrita de outro jeito
+            ("Combustível", "Triciclo"), a despesa sai da conta sem erro nenhum e o
+            triciclo parece dar mais lucro do que dá. */}
+        <p className="order-last col-span-2 -mt-2 text-xs text-neutro">
+          Combustível e manutenção do triciclo: use a categoria Transporte.
+        </p>
         <Input
           label="Mês do custo"
           type="month"

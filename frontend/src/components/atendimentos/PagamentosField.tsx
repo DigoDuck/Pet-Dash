@@ -61,7 +61,7 @@ export function PagamentosField({
             </label>
             <select
               id={`pag-metodo-${i}`}
-              className="rounded-lg border border-neutro-light bg-white px-3 py-2 text-sm text-escuro pointer-coarse:min-h-11 pointer-coarse:text-base"
+              className="rounded-lg border border-neutro/75 bg-white px-3 py-2 text-sm text-escuro pointer-coarse:min-h-11 pointer-coarse:text-base"
               {...register(`pagamentos.${i}.metodo`)}
             >
               {METODOS.map((m) => (
@@ -79,7 +79,7 @@ export function PagamentosField({
               id={`pag-valor-${i}`}
               inputMode="decimal"
               placeholder="0,00"
-              className="rounded-lg border border-neutro-light bg-white px-3 py-2 text-sm text-escuro pointer-coarse:min-h-11 pointer-coarse:text-base"
+              className="rounded-lg border border-neutro/75 bg-white px-3 py-2 text-sm text-escuro pointer-coarse:min-h-11 pointer-coarse:text-base"
               {...register(`pagamentos.${i}.valor`)}
             />
           </div>

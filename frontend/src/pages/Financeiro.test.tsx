@@ -94,8 +94,8 @@ describe("Financeiro", () => {
 
     renderizar();
 
-    expect(await screen.findByText("R$ 1500,00")).toBeInTheDocument();
-    expect(screen.getByText("R$ 2000,00")).toBeInTheDocument();
+    expect(await screen.findByText("R$ 1.500,00")).toBeInTheDocument();
+    expect(screen.getByText("R$ 2.000,00")).toBeInTheDocument();
   });
 
   // A pergunta da Patricia é "o triciclo se paga?", e ela não é respondida por
@@ -114,7 +114,7 @@ describe("Financeiro", () => {
     expect(screen.getByText("− R$ 280,00")).toBeInTheDocument();
     expect(screen.getByText("+ R$ 430,00")).toBeInTheDocument();
     // O custo do transporte é um recorte do total, não uma despesa a mais.
-    expect(screen.getByText("R$ 1500,00")).toBeInTheDocument();
+    expect(screen.getByText("R$ 1.500,00")).toBeInTheDocument();
     expect(screen.getByText("Transporte: R$ 280,00")).toBeInTheDocument();
   });
 

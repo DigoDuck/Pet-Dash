@@ -31,7 +31,7 @@ export function AtendimentoTabela({ atendimentos }: { atendimentos: Atendimento[
             <th className="px-6 py-3 font-semibold md:px-2">Pet / Tutor</th>
             <th className="hidden px-2 py-3 font-semibold md:table-cell">Serviço</th>
             <th className="hidden px-2 py-3 font-semibold md:table-cell">Origem</th>
-            <th className="hidden px-2 py-3 font-semibold md:table-cell">Status</th>
+            <th className="hidden px-2 py-3 font-semibold md:table-cell">Situação</th>
             <th className="px-2 py-3 text-right font-semibold">Valor</th>
             <th className="px-6 py-3 text-right font-semibold">Ações</th>
           </tr>

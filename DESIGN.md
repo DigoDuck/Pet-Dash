@@ -12,7 +12,7 @@ colors:
   fundo: "#faf6f1"
   escuro: "#1c1917"
   escuro-suave: "#2e2926"
-  neutro: "#78716c"
+  neutro: "#716a65"
   neutro-light: "#d6d3d1"
   sucesso: "#3d7a4a"
   erro: "#b83c3c"
@@ -137,7 +137,7 @@ Paleta restrita: neutros quentes carregam a tela, marsala marca a ação, dourad
 - **Fundo** (#faf6f1): fundo da página.
 - **Escuro** (#1c1917): texto principal e a faixa da sidebar.
 - **Escuro suave** (#2e2926): texto secundário forte, item ativo da sidebar.
-- **Neutro** (#78716c): texto de apoio, rótulos de coluna, placeholder. É o limite de contraste do sistema (cerca de 4.6:1 sobre o creme): não clarear.
+- **Neutro** (#716a65): texto de apoio, rótulos de coluna, placeholder. Cerca de 5:1 sobre o creme e 4,9:1 sobre o fundo; o tom anterior (#78716c) dava 4,46:1 sobre o fundo e reprovava. Não clarear.
 - **Neutro claro** (#d6d3d1): bordas e divisores.
 
 ### Semantic
@@ -199,7 +199,7 @@ Plano por padrão. A profundidade vem de camadas tonais (fundo, creme, branco do
 
 ### Inputs
 
-- **Estilo:** fundo branco, borda neutro claro, cantos de 8px, rótulo acima.
+- **Estilo:** fundo branco, borda `neutro` a 75% (3,2:1, o mínimo de 3:1 para componente; o neutro claro dava 1,5:1), cantos de 8px, rótulo acima.
 - **Foco:** borda marsala e anel marsala a 20%.
 - **Erro:** borda erro e mensagem em texto erro abaixo, com `role="alert"`.
 
